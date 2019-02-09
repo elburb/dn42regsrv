@@ -17,14 +17,14 @@ interactive applications and the DN42 registry.
 Requires [git](https://git-scm.com/) and [go](https://golang.org)
 
 ```
-go get https://git.dn42.us/burble/dn42regsrv
+go get -insecure git.dn42.us/burble/dn42regsrv
 ```
 
 ## Running
 
 Use --help to view configurable options
 ```
-./dn42regsrv --help
+${GOPATH}/bin/dn42regsrv --help
 ```
 
 The server requires access to a clone of the DN42 registry and for the git executable
@@ -33,10 +33,9 @@ If you want to use the auto pull feature then the registry must
 also be writable by the server.
 
 ```
-cd ${GOROOT}/src/dn42regsrv
+cd ${GOPTH}/src/git.dn42.us/burble/dn42regsrv
 git clone http://git.dn42.us/dn42/registry.git
-./dn42regsrv --help
-./dn42regsrv
+${GOPATH}/dn42regsrv
 ```
 
 A sample service file is included for running the server under systemd

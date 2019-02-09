@@ -1,6 +1,6 @@
 # dn42regsrv API Description
 
-## GET /<file>
+## GET /&lt;file&gt;
 
 If the StaticRoot configuration option points to a readable directory, files from
 the directory will be served under /
@@ -22,14 +22,14 @@ http://localhost:8042/api/registry/
 ```
 
 
-## GET /api/registry/<type>?match
+## GET /api/registry/&lt;type&gt;?match
 
 Returns a JSON object listing all objects for the matched types.
 
 Keys for the returned object are registry types, the value for each type is an
 array of object names
 
-If the match parameter is provided, the <type> is substring matched against
+If the match parameter is provided, the &lt;type&gt; is substring matched against
 all registry types, otherwise an exact type name is required.
 
 A special type of '*' returns all types and objects in the registry.
@@ -45,11 +45,11 @@ http://localhost:8042/api/registry/route?match  # list route and route6 objects
 
 ```
 
-## GET /api/registry/<type>/<object>?match&raw
+## GET /api/registry/&lt;type&gt;/&lt;object&gt;?match&amp;raw
 
 Return a JSON object with the registry data for each matching object.
 
-The keys for the object are the object paths in the form <type>/<object name>. The values depends on the raw parameter.
+The keys for the object are the object paths in the form &lt;type&gt;/&lt;object name&gt;. The values depends on the raw parameter.
 
 if the raw parameter is provided, the returned object consists of a single key 'Attributes'
 which will be an array of key/value pairs exactly as held within the registry.
@@ -59,8 +59,8 @@ style links depending the relations defined in the DN42 schema. In addition a
 'Backlinks' key is added which provides an array of registry objects that
 reference this one.
 
-If the match parameter is provided, the <object> is substring matched against all
-objects in the <type>. Matching is case insensitive.
+If the match parameter is provided, the &lt;object&gt; is substring matched against all
+objects in the &lt;type&gt;. Matching is case insensitive.
 
 If the match parameter is not provided, an exact, case sensitive object name is required.
 
