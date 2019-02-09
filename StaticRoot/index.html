@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <link rel="stylesheet" href="bootstrap.min.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+  <style>
+    .material-icons { display:inline-flex;vertical-align:middle }
+    .table th, .table td { padding: 0.2rem; border: none }
+    pre { margin-bottom: 0px }
+    .regref span {
+    padding: 0.3em 1em 0.3em 1em; margin: 0.4em;
+    white-space: nowrap; display:inline-block;
+    }
+    a { cursor: pointer }
+  </style>
+  <title>DN42 Registry Explorer</title>
+</head>
+<body style="box-shadow: inset 0 2em 10em rgba(0,0,0,0.4); min-height: 100vh">
+<div id="explorer">
+<nav class="navbar navbar-fixed-top navbar-expand-md navbar-dark bg-dark">
+  <form class="form-inline" id="SearchForm">
+    <input v-bind:value="searchInput"
+           v-on:input="debounceSearchInput($event.target.value)"
+           class="form-control-lg" size="30" type="search"
+           placeholder="Search the registry" aria-label="Search"/>
+  </form>
+  <div class="collapse navbar-collapse w-100 ml-auto">
+    <div class="ml-auto"><a class="navbar-brand"
+     href="/">Registry Explorer</a>&nbsp;<a class="pull-right navbar-brand"
+     href="https://dn42.us/"><img src="/dn42_logo.png" width="173"
+     height="60"/></a></div>
+</nav>
+<div style="padding: 1em">
+
+<div v-show="searchInput == ''">
+
+<div class="jumbotron">
+  <h1>DN42 Registry Explorer</h1>
+  <p class="lead">Just start typing in the search box to start searching the registry</p>
+  <hr/>
+  <p>
+  <p>Search Tips</p>
+  <ul>
+    <li>Searches are case independent
+    <li>No need to hit enter, searches will start immediately
+    <li>Prefixing the search by a registry type followed by / will narrow the search to
+      just that type (e.g. <a v-on:click="updateSearch('domain/.dn42')"
+                                          class="text-success">domain/.dn42</a>&nbsp;)
+    <li>Searching for <b>type/</b> will return all the objects for that type (e.g.
+      <a v-on:click="updateSearch('schema/')" class="text-success">schema/</a>&nbsp;)
+    <li>A blank search box will return you to these instructions
+    <li>Searches are made on object names; searching the content of objects
+      is not supported (yet!).
+    <li>Going back (or any search history) is also not supported yet.
+  </ul>
+  <hr/>
+  <p>The registry explorer is a simple web app using
+    <a href="https://git.dn42.us/burble/dn42regsrv">dn42regsrv</a>;
+    a REST API for the DN42 registry built with <a href="https://golang.org/">Go</a>
+</div>    
+  
+<registry-stats/>
+
+</div>
+
+<section v-if="state == 'loading'">
+  <div class="alert alert-info" role="alert">
+    Loading data ...
+  </div>
+</section>
+
+<section v-else-if="state == 'error'">
+  <div class="alert alert-primary clearfix" role="alert">
+    An error recurred whilst retrieving data <button type="button" class="float-right btn btn-warning" v-on:click="reload"><span class="material-icons">refresh</span>&nbsp;Refresh</button>
+  </div>
+</section>  
+
+<section v-else-if="state == 'noresults'">
+  <h2>Searching for "{{ searchInput }}" ...</h2>
+  <div class="alert alert-dark" role="alert">
+    Sorry, no results found
+  </div>
+</section>
+
+<section v-else-if="state == 'resultlist'">
+  <h2>Listing results for "{{ searchInput }}" ...</h2>
+  <div class="container d-flex flex-row flex-wrap">
+    <div style="text-align: center">
+      <span v-for="value in result" style="margin: 0.5em 1em 0.5em 1em; display:inline-block">
+        <reg-object v-bind:link="value[0] + '/' + value[1]"></reg-object>
+        </span>
+      </div>
+  </div>
+</section>
+
+<section v-else-if="state == 'result'">
+  <div v-for="(val, key) in result">
+  <h2><reg-object v-bind:link="key"></reg-object></h2>
+  <div style="padding-left: 2em">
+  <table class="table">
+    <thead>
+      <tr><th scope="col">Key</th><th scope="col">Value</th></tr>
+    </thead>
+    <tbody>
+      <tr v-for="a in val.Attributes">
+        <th scope="row" class="text-primary" style="white-space:nowrap">{{ a[0] }}</th>
+        <td><reg-attribute v-bind:content="a[1]"></reg-attribute></td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+  <section v-if="val.Backlinks.length != 0">
+    <p>Referenced by</p>
+    <div style="padding-left: 2em">
+    <table class="table">
+      <tbody>
+        <tr v-for="r in val.Backlinks">
+          <td><reg-object v-bind:link="r"></reg-object></td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+  </div>
+</section>
+
+</div>
+</div>
+<footer class="page-footer font-small">
+<div style="margin-top: 20px; padding: 5px">
+<a href="https://git.dn42.us/burble/dn42regsrv">Source Code</a>.
+Powered by
+<a href="https://getbootstrap.com/">Bootstrap</a>,
+<a href="https://vuejs.org">Vue.js</a>,
+<a href="https://github.com/axios/axios">axios</a>,
+<a href="http://alexcorvi.github.io/anchorme.js/">Anchorme</a>.
+</div>
+</footer>
+</div>
+
+<script type="text/x-template" id="registry-stats-template">
+<div class="container d-flex flex-column w-75">
+  <h5>Registry Stats</h5>
+<section v-if="state == 'error'">
+  <div class="alert alert-primary clearfix" role="alert">
+    An error recurred whilst retrieving data <button type="button" class="float-right btn btn-warning" v-on:click="reload"><span class="material-icons">refresh</span>&nbsp;Refresh</button>
+  </div>
+</section>
+<section v-else-if="state == 'loading'">
+  <div class="alert alert-info" role="alert">
+    Loading data ...
+  </div>
+</section>
+<section v-else>
+  <p style="padding:1em;text-align:center">
+    <span v-for="(value, key) in types" style="margin-left:0.5em;margin-right:0.5em;white-space:nowrap;display:inline-block"><a v-on:click="updateSearch(key + '/')" class="text-success">{{ key }}</a>:&nbsp;<b>{{ value }}</b>&nbsp;records</span>
+  </p>
+</section>
+</div>
+</script>
+
+<script type="text/x-template" id="reg-object-template">
+<span class="regref"><a v-on:click="updateSearch(rtype + '/' + obj)" class="text-success" 
+style="margin-right: 0.4em">{{ obj }}</a>&nbsp;<span 
+class="badge badge-pill badge-dark text-muted">{{ rtype }}</span></span></span>  
+</script>
+
+<script type="text/x-template" id="reg-attribute-template">
+  <span style="word-break: break-all">
+    <reg-object v-if="isRegObject()" v-bind:link="objectLink"></reg-object>
+    <span v-else class="text-monospace" v-html="decorated"></span>
+</span>
+</script>
+
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/js/bootstrap.min.js" integrity="sha384-B0UglyR+jN6CkvvICOB2joaf5I4l3gm9GU6Hc1og6Ls7i6U/mkkaduKaBhlAXv9k" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/vue@2.6.2/dist/vue.js"></script>
+<!-- <script src="https://cdn.jsdelivr.net/npm/vue@2.6.2/dist/vue.min.js"></script> -->
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+<script src="anchorme.min.js"></script>
+<script src="explorer.js"></script>
+</body>
+</html>
