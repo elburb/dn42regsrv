@@ -26,6 +26,11 @@
            class="form-control-lg" size="30" type="search"
            placeholder="Search the registry" aria-label="Search"/>
   </form>
+  <a tabindex="0" style="margin-left: 1em" class="popover-dismiss btn btn-sm btn-dark" role="button"
+     data-toggle="popover" data-placement="bottom" data-trigger="focus"
+     title="Copied to clipboard" v-on:click="copyPermalink"
+     v-bind:data-content="permalink">link</a>
+  
   <div class="collapse navbar-collapse w-100 ml-auto">
     <div class="ml-auto"><a class="navbar-brand"
      href="/">Registry Explorer</a>&nbsp;<a class="pull-right navbar-brand"
@@ -126,6 +131,10 @@
   </div>
 </section>
 
+<textarea class="d-none" ref="permalink">
+{{ permalink }}
+</textarea>
+
 </div>
 </div>
 <footer class="page-footer font-small">
@@ -168,12 +177,14 @@ class="badge badge-pill badge-dark text-muted">{{ rtype }}</span></span></span>
 </script>
 
 <script type="text/x-template" id="reg-attribute-template">
-  <span style="word-break: break-all">
+  <span style="word-break: break-all; white-space: pre-wrap">
     <reg-object v-if="isRegObject()" v-bind:link="objectLink"></reg-object>
     <span v-else class="text-monospace" v-html="decorated"></span>
 </span>
 </script>
 
+<script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/js/bootstrap.min.js" integrity="sha384-B0UglyR+jN6CkvvICOB2joaf5I4l3gm9GU6Hc1og6Ls7i6U/mkkaduKaBhlAXv9k" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/vue@2.6.2/dist/vue.js"></script>
 <!-- <script src="https://cdn.jsdelivr.net/npm/vue@2.6.2/dist/vue.min.js"></script> -->

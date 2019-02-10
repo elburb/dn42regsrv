@@ -164,10 +164,26 @@ var appData = {
 var appMethods = {
 
     loadIndex: function(event) {
+
+        this.state = 'loading'
+        this.searchInput = 'Initialisation ...'
+        
         axios
             .get('/api/registry/*')
             .then(response => {
                 this.index = response.data
+
+                // if a query parameter has been passed,
+                // update the search
+                if (window.location.search != "") {
+                    var param = window.location.search.substr(1)
+                    this.$nextTick(this.updateSearch(param))
+                }
+                else {
+                    this.state = ''
+                    this.searchInput = ''
+                }
+
             })
             .catch(error => {
                 // what to do here ?
@@ -223,6 +239,33 @@ var appMethods = {
             this.state = "resultlist"
             this.result = this.filtered
         }
+    },
+
+    copyPermalink: function() {
+
+        // create a temporary textarea element off the page
+        var target = document.createElement("textarea")
+        target.style.position = "absolute"
+        target.style.left = "-9999px"
+        target.style.top = "0"
+        target.id = "_hidden_permalink_"
+        document.body.appendChild(target)
+
+        // set the text area content
+        target.textContent = this.permalink
+
+        // copy it to the clipboard
+        var currentFocus = document.activeElement
+        target.focus()
+        target.select()
+        document.execCommand('copy')
+
+        // and return to normal
+        if (currentFocus && typeof currentFocus.focus === "function") {
+            currentFocus.focus()
+        }
+        
+        document.body.removeChild(target)
     }
 
 }
@@ -234,8 +277,18 @@ var vm = new Vue({
     el: '#explorer',
     data: appData,
     methods: appMethods,
+    computed: {
+        permalink: function() {
+            return window.location.origin + '/?' + this.searchInput
+        }
+    },
     mounted() {
         this.loadIndex()
+        this.$nextTick(function() {
+            $('.popover-dismiss').popover({
+                trigger: 'focus'
+            })
+        })
     }
 })
 
