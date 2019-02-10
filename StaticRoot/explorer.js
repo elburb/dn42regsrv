@@ -87,7 +87,7 @@ Vue.component('reg-attribute', {
             return reg[2]
         },
         decorated: function() {
-            return anchorme(this.content, {
+            return anchorme(this.content.replace(/\n/g, "<br/>"), {
                 truncate: 40,
                 ips: false,
                 attributes: [ { name: "target", value: "_blank" } ]                

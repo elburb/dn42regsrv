@@ -1,0 +1,22 @@
+##########################################################################
+# dn42regsrv example systemd service file
+##########################################################################
+
+[Unit]
+Description=DN42 Registry API Server
+After=network.target
+
+[Install]
+WantedBy=multi-user.target
+
+[Service]
+User=regsrv
+Group=registry
+Type=simple
+Restart=on-failure
+ExecStart=/home/regsrv/go/bin/dn42regsrv \
+     -s /home/regsrv/go/src/git.dn42.us/burble/dn42regsrv/StaticRoot \
+     -d /home/regsrv/registry
+     
+#########################################################################
+# end of file
