@@ -1,16 +1,21 @@
 # dn42regsrv
 
 A REST API for the DN42 registry, written in Go, to provide a bridge between
-interactive applications and the DN42 registry.
+interactive applications and registry data.
+
+A public instance of the API and explorer web app can be accessed via:
+
+* [https://explorer.burble.com/](https://explorer.burble.com/) (Internet link)
+* [http://collector.dn42:8042/](http://collector.dn42:8042/) (DN42 Link)
 
 ## Features
 
-- REST API for querying DN42 registry objects
-- Able to decorate objects with relationship information based on SCHEMA type definitions
-- Includes a simple webserver for delivering static files which can be used to deliver
+* REST API for querying DN42 registry objects
+* Able to decorate objects with relationship information based on SCHEMA type definitions
+* Includes a simple webserver for delivering static files which can be used to deliver
   basic web applications utilising the API (such as the included DN42 Registry Explorer)
-- Automatic pull from the DN42 git repository to keep the registry up to date
-- Included responsive web app for exploring the registry
+* Automatic pull from the DN42 git repository to keep the registry up to date
+* Includes a responsive web app for exploring the registry
 
 ## Building
 
@@ -27,8 +32,8 @@ Use --help to view configurable options
 ${GOPATH}/bin/dn42regsrv --help
 ```
 
-The server requires access to a clone of the DN42 registry and for the git executable
-to be accessible.  
+The server requires access to a clone of the DN42 registry and for
+the git executable to be accessible.  
 If you want to use the auto pull feature then the registry must
 also be writable by the server.
 
@@ -60,6 +65,5 @@ Please feel free to raise issues or create pull requests for the project git rep
 
 ### DN42 Registry Explorer Web App
 
-- Add search history and fix going back
 - Allow for attribute searches
 

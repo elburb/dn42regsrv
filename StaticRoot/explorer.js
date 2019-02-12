@@ -2,51 +2,21 @@
 // DN42 Registry Explorer
 //////////////////////////////////////////////////////////////////////////
 
-//////////////////////////////////////////////////////////////////////////
-// registry-stats component
-
-Vue.component('registry-stats', {
-    template: '#registry-stats-template',
-    data() {
-        return {
-            state: "loading",
-            error: "",
-            types: null,
-        }
-    },
-    methods: {
-        updateSearch: function(str) {
-            vm.updateSearch(str)
-        },
-        
-        reload: function(event) {
-            this.types = null,
-            this.state = "loading"
-
-            axios
-                .get('/api/registry/')
-                .then(response => {
-                    this.types = response.data
-                    this.state = 'complete'
-                })
-                .catch(error => {
-                    this.error = error
-                    this.state = 'error'
-                    console.log(error)                    
-                })
-        }
-    },
-    mounted() {
-        this.reload()
+// global store for data that is loaded once
+const GlobalStore = {
+    data: {
+        RegStats: null,
+        Index: null
     }
-})
+}
+
 
 //////////////////////////////////////////////////////////////////////////
 // registry object component
 
 Vue.component('reg-object', {
     template: '#reg-object-template',
-    props: [ 'link' ],
+    props: [ 'link', 'content' ],
     data() {
         return { }
     },
@@ -97,201 +67,267 @@ Vue.component('reg-attribute', {
 })
 
 //////////////////////////////////////////////////////////////////////////
-// construct a search URL from a search term
+// search input component
 
-function matchObjects(objects, rtype, term) {
+Vue.component('search-input', {
+    template: '#search-input-template',
+    data() {
+        return {
+            search: '',
+            searchTimeout: 0
+        }
+    },
+    methods: {
 
-    var results = [ ]
-    
-    for (const obj in objects) {
-        var s = objects[obj].toLowerCase()
-        var pos = s.indexOf(term)
-        if (pos != -1) {
-            if ((pos == 0) && (s == term)) {
-                // exact match, return just this result
-                return [[ rtype, objects[obj] ]]
+        debounceSearch: function(value) {
+            if (this.searchTimeout) {
+                clearTimeout(this.searchTimeout)
             }
-            results.push([ rtype, objects[obj] ])
-        }
-    }
-    
-    return results
-}
 
+            // map an empty search box to the landing page
+            if (value == "") { value = "/" }            
 
-function searchFilter(index, term) {
-
-    var results = [ ]
-
-    // comparisons are lowercase
-    term = term.toLowerCase()
-
-    // includes a '/' ? search only in that type
-    var slash = term.indexOf('/')
-    if (slash != -1) {
-        var rtype = term.substring(0, slash)
-        var term = term.substring(slash + 1)
-        objects = index[rtype]
-        if (objects != null) {
-            results = matchObjects(objects, rtype, term)
-        }
-    }
-    else {
-        // walk though the entire index
-        for (const rtype in index) {
-            results = results.concat(matchObjects(index[rtype], rtype, term))
-        }
-    }
-
-    return results
-}
-
-//////////////////////////////////////////////////////////////////////////
-// main application
-
-// application data
-var appData = {
-    searchInput: '',
-    searchTimeout: 0,
-    state: '',
-    debug: "",
-    index: null,
-    filtered: null,
-    result: null
-}
-
-// methods
-var appMethods = {
-
-    loadIndex: function(event) {
-
-        this.state = 'loading'
-        this.searchInput = 'Initialisation ...'
-        
-        axios
-            .get('/api/registry/*')
-            .then(response => {
-                this.index = response.data
-
-                // if a query parameter has been passed,
-                // update the search
-                if (window.location.search != "") {
-                    var param = window.location.search.substr(1)
-                    this.$nextTick(this.updateSearch(param))
-                }
-                else {
-                    this.state = ''
-                    this.searchInput = ''
-                }
-
-            })
-            .catch(error => {
-                // what to do here ?
-                console.log(error)
-            })
-    },
-
-    // called on every search input change
-    debounceSearchInput: function(value) {
-        
-        if (this.search_timeout) {
-            clearTimeout(this.search_timeout)
-        }
-
-        // reset if searchbox is empty
-        if (value == "") {
-            this.state = ""
-            this.searchInput = ""
-            this.filtered = null
-            this.results = null
-            return
-        }
-        
-        this.search_timeout =
-            setTimeout(this.updateSearch.bind(this,value),500)
-    },
-
-    // called after the search input has been debounced
-    updateSearch: function(value) {
-        this.searchInput = value
-        this.filtered = searchFilter(this.index, value)
-        if (this.filtered.length == 0) {
-            this.state = "noresults"
-        }
-        else if (this.filtered.length == 1) {
-            this.state = "loading"
-            var details = this.filtered[0]
-
-            query = '/api/registry/' + details[0] + '/' + details[1]
-            
-            axios
-                .get(query)
-                .then(response => {
-                    this.state = 'result'
-                    this.result = response.data
-                })
-                .catch(error => {
-                    this.error = error
-                    this.state = 'error'
-                })
-        }
-        else {
-            this.state = "resultlist"
-            this.result = this.filtered
-        }
-    },
-
-    copyPermalink: function() {
-
-        // create a temporary textarea element off the page
-        var target = document.createElement("textarea")
-        target.style.position = "absolute"
-        target.style.left = "-9999px"
-        target.style.top = "0"
-        target.id = "_hidden_permalink_"
-        document.body.appendChild(target)
-
-        // set the text area content
-        target.textContent = this.permalink
-
-        // copy it to the clipboard
-        var currentFocus = document.activeElement
-        target.focus()
-        target.select()
-        document.execCommand('copy')
-
-        // and return to normal
-        if (currentFocus && typeof currentFocus.focus === "function") {
-            currentFocus.focus()
-        }
-        
-        document.body.removeChild(target)
-    }
-
-}
-
-
-// intialise Vue instance
-
-var vm = new Vue({
-    el: '#explorer',
-    data: appData,
-    methods: appMethods,
-    computed: {
-        permalink: function() {
-            return window.location.origin + '/?' + this.searchInput
+            this.searchTimeout = setTimeout(
+                this.$router.push.bind(this.$router, value), 500
+            )
         }
     },
     mounted() {
-        this.loadIndex()
-        this.$nextTick(function() {
-            $('.popover-dismiss').popover({
-                trigger: 'focus'
-            })
+
+        // listen to search updates and set the search text appropriately
+        this.$root.$on('SearchChanged', value => {
+            this.search = value
         })
     }
 })
 
+//////////////////////////////////////////////////////////////////////////
+// registry-stats component
+
+Vue.component('registry-stats', {
+    template: '#registry-stats-template',
+    data() {
+        return {
+            state: null,
+            error: null,
+            store: GlobalStore.data
+        }
+    },
+    methods: {
+
+        // just fetch the stats from the API server via axios
+        reload(event) {
+            this.store.RegStats = null
+            this.state = "loading"
+
+            axios
+                .get('/api/registry/')
+                .then(response => {
+                    this.store.RegStats = response.data
+                    this.state = 'complete'
+                })
+                .catch(error => {
+                    this.error = error
+                    this.state = 'error'
+                    console.log(error)                    
+                })
+        }
+    },
+    mounted() {
+        if (this.store.RegStats == null) {
+            this.reload()
+        }
+    }
+})
+
+//////////////////////////////////////////////////////////////////////////
+// root component
+
+Vue.component('app-root', {
+    template: '#app-root-template',
+    mounted() {
+        this.$root.$emit('SearchChanged', '')        
+    }
+})
+
+//////////////////////////////////////////////////////////////////////////
+// search results
+
+Vue.component('app-search', {
+    template: '#app-search-template',
+    data() {
+        return {
+            state: null,
+            search: null,
+            results: null,
+            store: GlobalStore.data
+        }
+    },
+
+    // trigger a search on route update and on mount
+    beforeRouteUpdate(to, from, next) {
+        this.search = to.params.pathMatch
+        this.doSearch()
+        next()
+    },
+    mounted() {
+        // store the search for later
+        this.search = this.$route.params.pathMatch
+        
+        // the index must be loaded before any real work takes place
+        if (this.store.Index == null) {
+            this.loadIndex()
+        }
+        else {
+            // index was already loaded, go search
+            this.doSearch()
+        }
+    },
+    
+    methods: {
+
+        // load the search index from the API
+        loadIndex() {
+
+            this.state = 'loading'
+            this.$root.$emit('SearchChanged', 'Initialising ...')
+            
+            axios
+                .get('/api/registry/*')
+                .then(response => {
+                    this.store.Index = response.data
+                    
+                    // if a query parameter has been passed,
+                    // then go search
+                    if (this.search != null) {
+                        this.$nextTick(this.doSearch())
+                    }
+                })
+                .catch(error => {
+                    this.state = 'error'
+                    console.log(error)
+                })            
+        },
+
+        // substring match object names against a search
+        matchObjects(objects, rtype, term) {
+            var results = [ ]
+
+            // check each object
+            for (const obj in objects) {
+
+                // matches are all lower case
+                var s = objects[obj].toLowerCase()
+                
+                var pos = s.indexOf(term)
+                if (pos != -1) {
+                    if ((pos == 0) && (s == term)) {
+                        // exact match, return just this result
+                        return [[ rtype, objects[obj] ]]
+                    }
+                    results.push([ rtype, objects[obj] ])
+                }
+            }
+            
+            return results            
+        },
+        
+
+        // filter the index to find matches
+        searchFilter() {
+            
+            var results = [ ]
+            var index = this.store.Index
+            
+            // comparisons are lowercase
+            var term = this.search.toLowerCase()
+            
+            // check if search includes a '/'
+            var slash = term.indexOf('/')
+            if (slash != -1) {
+                // match only on the specific type
+                var rtype = term.substring(0, slash)
+                var term = term.substring(slash + 1)
+                objects = index[rtype]
+                
+                if (objects != null) {
+                    results = this.matchObjects(objects, rtype, term)
+                }
+            }
+            else {
+                
+                // walk though the entire index
+                for (const rtype in index) {
+                    var objlist = this.matchObjects(index[rtype], rtype, term)
+                    results = results.concat(objlist)
+                }
+            }
+            
+            return results
+            
+        },
+
+        // perform the search and present results
+        doSearch() {
+            // notify other components that the search is updated
+            this.$root.$emit('SearchChanged', this.search)
+
+            // filter matches against the index
+            filtered = this.searchFilter()
+
+            // got nothing ?
+            if (filtered.length == 0) {
+                this.state = "noresults"
+            }
+
+            // just one result
+            else if (filtered.length == 1) {
+                var objname = filtered[0]
+
+                // load the object from the API
+                this.state = 'loading'
+                query = '/api/registry/' + objname[0] + '/' + objname[1]
+                
+                axios
+                    .get(query)
+                    .then(response => {
+                        this.state = 'result'
+                        this.result = response.data
+                    })
+                    .catch(error => {
+                        this.error = error
+                        this.state = 'error'
+                    })
+            }
+
+            // lots of results
+            else {
+                this.state = "resultlist"
+                this.result = filtered
+            }
+        }
+    }
+})
+
+//////////////////////////////////////////////////////////////////////////
+// main vue application starts here
+
+// initialise the Vue Router
+const router = new VueRouter({
+    routes: [
+        { path: '/',   component: Vue.component('app-root')   },
+        { path: '/*',  component: Vue.component('app-search') }
+    ]
+})
+
+// and the main app instance
+const vm = new Vue({
+    el: '#explorer_app',
+    data: {
+        
+    },
+    router
+})
 
 
 //////////////////////////////////////////////////////////////////////////

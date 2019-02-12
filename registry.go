@@ -52,6 +52,7 @@ type RegAttributeSchema struct {
 type RegTypeSchema struct {
 	Ref        string
 	Attributes map[string]*RegAttributeSchema
+	KeyIndex   map[string]map[*RegObject][]*RegAttribute
 }
 
 // the registry itself
@@ -78,10 +79,7 @@ func RegistryMakePath(t string, o string) string {
 
 // attribute functions
 
-// return a pointer to a RegType from a decorated attribute value
-func (*RegAttribute) ExtractRegType() *RegType {
-	return nil
-}
+// nothing here
 
 // object functions
 
@@ -142,6 +140,40 @@ func (schema *RegTypeSchema) validate(attributes []*RegAttribute) []*RegAttribut
 	}
 
 	return validated
+}
+
+// add an attribute to the key map
+func (schema *RegTypeSchema) addKeyIndex(object *RegObject,
+	attribute *RegAttribute) {
+
+	objmap := schema.KeyIndex[attribute.Key]
+	// create a new object map if it didn't exist
+	if objmap == nil {
+		objmap = make(map[*RegObject][]*RegAttribute)
+		schema.KeyIndex[attribute.Key] = objmap
+	}
+
+	// add the object/attribute reference
+	objmap[object] = append(objmap[object], attribute)
+}
+
+// object functions
+
+// add a backlink to an object
+func (object *RegObject) addBacklink(ref *RegObject) {
+
+	// check if the backlink already exists, this could be the case
+	// if an object is referenced multiple times (e.g. admin-c & tech-c)
+	for _, blink := range object.Backlinks {
+		if blink == ref {
+			// already exists, just return as nothing to do
+			return
+		}
+	}
+
+	// didn't find a match, add the backlink
+	object.Backlinks = append(object.Backlinks, ref)
+
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -363,6 +395,7 @@ func (registry *Registry) parseSchema() {
 		typeSchema := &RegTypeSchema{
 			Ref:        typeName,
 			Attributes: make(map[string]*RegAttributeSchema),
+			KeyIndex:   make(map[string]map[*RegObject][]*RegAttribute),
 		}
 
 		// ensure the type exists
@@ -455,11 +488,14 @@ func (registry *Registry) decorate() {
 			for _, attribute := range object.Data {
 				cattribs += 1
 
+				// add this attribute to the key map
+				schema.addKeyIndex(object, attribute)
+
 				attribSchema := schema.Attributes[attribute.Key]
 				// are there relations defined for this attribute ?
 				// attribSchema may be null if this attribute is user defined (x-*)
-				if (attribSchema != nil) && attribute.matchRelation(object,
-					attribSchema.Relations) {
+				if (attribSchema != nil) &&
+					attribute.matchRelation(object, attribSchema.Relations) {
 					// matched
 					cmatched += 1
 				} else {
@@ -500,7 +536,8 @@ func (attribute *RegAttribute) matchRelation(parent *RegObject,
 				attribute.RawValue, object.Ref)
 
 			// and add a back reference to the related object
-			object.Backlinks = append(object.Backlinks, parent)
+			object.addBacklink(parent)
+
 			return true
 		}
 

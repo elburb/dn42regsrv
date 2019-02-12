@@ -1,46 +1,56 @@
 <!doctype html>
 <html lang="en">
 <head>
+  <title>DN42 Registry Explorer</title>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
   <link rel="stylesheet" href="bootstrap.min.css">
   <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+<!-- Style overrides -->  
   <style>
-    .material-icons { display:inline-flex;vertical-align:middle }
-    .table th, .table td { padding: 0.2rem; border: none }
-    pre { margin-bottom: 0px }
-    .regref span {
-    padding: 0.3em 1em 0.3em 1em; margin: 0.4em;
-    white-space: nowrap; display:inline-block;
-    }
-    a { cursor: pointer }
+.material-icons { display:inline-flex;vertical-align:middle }
+body { box-shadow: inset 0 2em 10em rgba(0,0,0,0.4); min-height: 100vh }
   </style>
-  <title>DN42 Registry Explorer</title>
 </head>
-<body style="box-shadow: inset 0 2em 10em rgba(0,0,0,0.4); min-height: 100vh">
-<div id="explorer">
+
+<body>
+<div id="explorer_app">
+
 <nav class="navbar navbar-fixed-top navbar-expand-md navbar-dark bg-dark">
-  <form class="form-inline" id="SearchForm">
-    <input v-bind:value="searchInput"
-           v-on:input="debounceSearchInput($event.target.value)"
-           class="form-control-lg" size="30" type="search"
-           placeholder="Search the registry" aria-label="Search"/>
-  </form>
-  <a tabindex="0" style="margin-left: 1em" class="popover-dismiss btn btn-sm btn-dark" role="button"
-     data-toggle="popover" data-placement="bottom" data-trigger="focus"
-     title="Copied to clipboard" v-on:click="copyPermalink"
-     v-bind:data-content="permalink">link</a>
-  
-  <div class="collapse navbar-collapse w-100 ml-auto">
-    <div class="ml-auto"><a class="navbar-brand"
-     href="/">Registry Explorer</a>&nbsp;<a class="pull-right navbar-brand"
-     href="https://dn42.us/"><img src="/dn42_logo.png" width="173"
-     height="60"/></a></div>
+  <search-input></search-input>
+  <div class="collapse navbar-collapse w-100 ml-auto text-nowrap">
+    <div class="ml-auto"><router-link class="navbar-brand"
+     to="/">Registry Explorer</router-link>&nbsp;<a class="pull-right navbar-brand"
+     href="https://dn42.us/"><img src="/dn42_logo.png" width="173" height="60"/></a>
+    </div>
+  </div>
 </nav>
-<div style="padding: 1em">
 
-<div v-show="searchInput == ''">
+<router-view></router-view>
 
+</div>
+<footer class="page-footer font-small">
+<div style="margin-top: 20px; padding: 5px">
+  <a href="https://git.dn42.us/burble/dn42regsrv">Source Code</a>.
+  Powered by
+  <a href="https://getbootstrap.com/">Bootstrap</a>,
+  <a href="https://vuejs.org">Vue.js</a>,
+  <a href="https://github.com/axios/axios">axios</a>,
+  <a href="http://alexcorvi.github.io/anchorme.js/">Anchorme</a>.
+</div>
+</footer>
+
+<script type="text/x-template" id="search-input-template">
+<form class="form-inline" id="SearchForm">
+  <input v-bind:value="search"
+         v-on:input="debounceSearch($event.target.value)"
+         class="form-control-lg" size="30" type="search"
+         placeholder="Search the registry" aria-label="Search"/>
+</form>
+</script>
+
+<script type="text/x-template" id="app-root-template">
+<div class="p-3">
 <div class="jumbotron">
   <h1>DN42 Registry Explorer</h1>
   <p class="lead">Just start typing in the search box to start searching the registry</p>
@@ -51,129 +61,137 @@
     <li>Searches are case independent
     <li>No need to hit enter, searches will start immediately
     <li>Prefixing the search by a registry type followed by / will narrow the search to
-      just that type (e.g. <a v-on:click="updateSearch('domain/.dn42')"
-                                          class="text-success">domain/.dn42</a>&nbsp;)
+      just that type (e.g. <router-link class="text-success"
+     to="domain/.dn42">domain/.dn42</router-link>)</li>
     <li>Searching for <b>type/</b> will return all the objects for that type (e.g.
-      <a v-on:click="updateSearch('schema/')" class="text-success">schema/</a>&nbsp;)
-    <li>A blank search box will return you to these instructions
+      <router-link class="text-success" to="schema/">schema/</router-link>)</li>
+    <li>A blank search box will return you to these instructions</li>
+    <li>Just copy to the URL to link to search results</li>    
     <li>Searches are made on object names; searching the content of objects
-      is not supported (yet!).
-    <li>Going back (or any search history) is also not supported yet.
+      is not supported (yet!).</li>
   </ul>
   <hr/>
-  <p>The registry explorer is a simple web app using
+  <p>
+    The registry explorer is a simple web app using
     <a href="https://git.dn42.us/burble/dn42regsrv">dn42regsrv</a>;
     a REST API for the DN42 registry built with <a href="https://golang.org/">Go</a>
-</div>    
-  
-<registry-stats/>
-
+  </p>
 </div>
+<registry-stats></registry-stats>
+</div>
+</script>
+
+<script type="text/x-template" id="registry-stats-template">
+<div class="container d-flex flex-column w-75">
+<h5>Registry Stats</h5>
+<section v-if="state == 'error'">
+  <div class="alert alert-warning clearfix" role="alert">
+    An error recurred whilst retrieving data from the API
+    <button type="button" class="float-right btn btn-primary"
+      v-on:click="reload"><span class="material-icons">refresh</span>
+      Refresh</button>
+  </div>
+</section>
+<section v-else-if="state == 'loading'">
+  <div class="alert alert-info" role="alert">Loading data ...</div>
+</section>
+<section v-else>
+  <p class="p-3 text-center">
+    <span v-for="(value, key) in store.RegStats"
+          class="mx-2 text-nowrap d-inline-block"> 
+      <router-link v-bind:to="'/'+key+'/'">{{ key }}</router-link>
+      : <b>{{ value }}</b>
+    </span>
+  </p>
+</section>
+</div>
+</script>
+
+<script type="text/x-template" id="app-search-template">
+<div class="p-3">
 
 <section v-if="state == 'loading'">
-  <div class="alert alert-info" role="alert">
-    Loading data ...
-  </div>
+  <div class="alert alert-info" role="alert">Loading data ...</div>
 </section>
 
 <section v-else-if="state == 'error'">
-  <div class="alert alert-primary clearfix" role="alert">
-    An error recurred whilst retrieving data <button type="button" class="float-right btn btn-warning" v-on:click="reload"><span class="material-icons">refresh</span>&nbsp;Refresh</button>
+  <div class="alert alert-warning clearfix" role="alert">
+    An error recurred whilst retrieving search results
   </div>
-</section>  
+</section>
 
 <section v-else-if="state == 'noresults'">
-  <h2>Searching for "{{ searchInput }}" ...</h2>
+  <h2>Searching for "{{ search }}" ...</h2>
   <div class="alert alert-dark" role="alert">
     Sorry, no results found
   </div>
 </section>
 
 <section v-else-if="state == 'resultlist'">
-  <h2>Listing results for "{{ searchInput }}" ...</h2>
+  <h2>Listing results for "{{ search }}" ...</h2>
   <div class="container d-flex flex-row flex-wrap">
-    <div style="text-align: center">
-      <span v-for="value in result" style="margin: 0.5em 1em 0.5em 1em; display:inline-block">
-        <reg-object v-bind:link="value[0] + '/' + value[1]"></reg-object>
-        </span>
-      </div>
+    <div class="text-center">
+      <span v-for="ref in result">
+        <reg-object class="mx-4 my-2" v-bind:link="ref[0]+'/'+ref[1]"></reg-object>
+      </span>
+    </div>
   </div>
 </section>
 
 <section v-else-if="state == 'result'">
   <div v-for="(val, key) in result">
-  <h2><reg-object v-bind:link="key"></reg-object></h2>
-  <div style="padding-left: 2em">
-  <table class="table">
-    <thead>
-      <tr><th scope="col">Key</th><th scope="col">Value</th></tr>
-    </thead>
-    <tbody>
-      <tr v-for="a in val.Attributes">
-        <th scope="row" class="text-primary" style="white-space:nowrap">{{ a[0] }}</th>
-        <td><reg-attribute v-bind:content="a[1]"></reg-attribute></td>
-      </tr>
-    </tbody>
-  </table>
-  </div>
-  <section v-if="val.Backlinks.length != 0">
-    <p>Referenced by</p>
-    <div style="padding-left: 2em">
-    <table class="table">
-      <tbody>
-        <tr v-for="r in val.Backlinks">
-          <td><reg-object v-bind:link="r"></reg-object></td>
-        </tr>
-      </tbody>
-    </table>
-    </div>
-  </section>
+    <h2 class="mb-4"><reg-object v-bind:link="key"></reg-object></h2>
+    <div class="pl-4">
+      <table class="table">
+        <thead>
+          <tr><th scope="col">Key</th><th scope="col">Value</th></tr>
+        </thead>
+        <tbody>
+          <tr v-for="a in val.Attributes">
+            <th scope="row" class="border-0 py-1 pr-3 text-primary text-nowrap">
+              {{ a[0] }}
+            </th>
+            <td class="border-0 p-1">
+              <reg-attribute v-bind:content="a[1]"></reg-attribute>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      </div>
+    <section v-if="val.Backlinks.length != 0">
+      <p>Referenced by</p>
+      <div class="pl-4">
+        <table class="table">
+          <tbody>
+            <tr v-for="rlink in val.Backlinks">
+              <td class="border-0 p-1">
+                <reg-object v-bind:link="rlink"></reg-object>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
   </div>
 </section>
 
-<textarea class="d-none" ref="permalink">
-{{ permalink }}
-</textarea>
-
-</div>
-</div>
-<footer class="page-footer font-small">
-<div style="margin-top: 20px; padding: 5px">
-<a href="https://git.dn42.us/burble/dn42regsrv">Source Code</a>.
-Powered by
-<a href="https://getbootstrap.com/">Bootstrap</a>,
-<a href="https://vuejs.org">Vue.js</a>,
-<a href="https://github.com/axios/axios">axios</a>,
-<a href="http://alexcorvi.github.io/anchorme.js/">Anchorme</a>.
-</div>
-</footer>
-</div>
-
-<script type="text/x-template" id="registry-stats-template">
-<div class="container d-flex flex-column w-75">
-  <h5>Registry Stats</h5>
-<section v-if="state == 'error'">
-  <div class="alert alert-primary clearfix" role="alert">
-    An error recurred whilst retrieving data <button type="button" class="float-right btn btn-warning" v-on:click="reload"><span class="material-icons">refresh</span>&nbsp;Refresh</button>
-  </div>
-</section>
-<section v-else-if="state == 'loading'">
-  <div class="alert alert-info" role="alert">
-    Loading data ...
-  </div>
-</section>
 <section v-else>
-  <p style="padding:1em;text-align:center">
-    <span v-for="(value, key) in types" style="margin-left:0.5em;margin-right:0.5em;white-space:nowrap;display:inline-block"><a v-on:click="updateSearch(key + '/')" class="text-success">{{ key }}</a>:&nbsp;<b>{{ value }}</b>&nbsp;records</span>
-  </p>
+  <div class="alert alert-warning" role="alert">
+    Something went wrong, an invalid search state was encountered ({{ state }})
+    <p>{{ $route.params.pathMatch }}</p>
+  </div>
 </section>
+
 </div>
 </script>
 
 <script type="text/x-template" id="reg-object-template">
-<span class="regref"><a v-on:click="updateSearch(rtype + '/' + obj)" class="text-success" 
-style="margin-right: 0.4em">{{ obj }}</a>&nbsp;<span 
-class="badge badge-pill badge-dark text-muted">{{ rtype }}</span></span></span>  
+  <span class="text-nowrap d-inline-block">
+    <router-link class="text-success mr-2" v-bind:to="'/'+link">
+      {{ ( content ? content : obj ) }}
+    </router-link>
+    <span class="badge back-pill badge-dark test-muted">{{ rtype }}</span>
+  </span>
 </script>
 
 <script type="text/x-template" id="reg-attribute-template">
@@ -184,11 +202,12 @@ class="badge badge-pill badge-dark text-muted">{{ rtype }}</span></span></span>
 </script>
 
 <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/js/bootstrap.min.js" integrity="sha384-B0UglyR+jN6CkvvICOB2joaf5I4l3gm9GU6Hc1og6Ls7i6U/mkkaduKaBhlAXv9k" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/vue@2.6.2/dist/vue.js"></script>
-<!-- <script src="https://cdn.jsdelivr.net/npm/vue@2.6.2/dist/vue.min.js"></script> -->
-<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+<script src="https://unpkg.com/vue"></script -->
+<script src="https://unpkg.com/vue-router"></script -->
+<script src="https://unpkg.com/axios@0.18.0/dist/axios.min.js"></script>
+<!-- script src="https://unpkg.com/vue@2.6.2/dist/vue.min.js"></script -->
+<!-- script src="https://unpkg.com/vue-router@3.0.2/dist/vue-router.js"></script -->
 <script src="anchorme.min.js"></script>
 <script src="explorer.js"></script>
 </body>
