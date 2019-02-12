@@ -84,9 +84,9 @@ Vue.component('search-input', {
                 clearTimeout(this.searchTimeout)
             }
 
-            // map an empty search box to the landing page
-            if (value == "") { value = "/" }            
-
+            // link should be an absolute path
+            value = '/' + value
+            
             this.searchTimeout = setTimeout(
                 this.$router.push.bind(this.$router, value), 500
             )
