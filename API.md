@@ -1,83 +1,278 @@
 # dn42regsrv API Description
 
-## GET /&lt;file&gt;
+## Registry API
 
-If the StaticRoot configuration option points to a readable directory, files from
-the directory will be served under /
+The general form of the registry query API is:
 
-The git repository contains a sample StaticRoot directory with a simple registry
-explorer web app.
+GET /api/registry/{type}/{object}/{key}/{attribute}?raw
 
-## GET /api/registry/
+* Prefixing with a '*' performs a case insensitive, substring match
+* A '*' on its own means match everything
+* Otherwise an exact, case sensitive match is performed
 
-Returns a JSON object, with keys for each registry type and values containing a count
-of the number of registry objects for each type.
-
-Example:
-```
-http://localhost:8042/api/registry/
-
-# sample output
-{"as-block":8,"as-set":34,"aut-num":1482,"domain":451,"inet6num":744,"inetnum":1270,"key-cert":7,"mntner":1378,"organisation":275,"person":1387,"registry":4,"role":14,"route":886,"route-set":2,"route6":594,"schema":18,"tinc-key":25,"tinc-keyset":3}
-```
-
-
-## GET /api/registry/&lt;type&gt;?match
-
-Returns a JSON object listing all objects for the matched types.
-
-Keys for the returned object are registry types, the value for each type is an
-array of object names
-
-If the match parameter is provided, the &lt;type&gt; is substring matched against
-all registry types, otherwise an exact type name is required.
-
-A special type of '*' returns all types and objects in the registry.
-
-Example:
-```
-http://localhost:8042/api/registry/aut-num      # list aut-num objects
-http://localhost:8042/api/registry/*            # list all types and objects
-http://localhost:8042/api/registry/route?match  # list route and route6 objects
-
-# sample output
-{"role":["ALENAN-DN42","FLHB-ABUSE-DN42","ORG-SHACK-ADMIN-DN42","PACKETPUSHERS-DN42","CCCHB-ABUSE-DN42","ORG-NETRAVNEN-DN42","ORG-SHACK-ABUSE-DN42","MAGLAB-DN42","NIXNODES-DN42","SOURIS-DN42","CCCKC-DN42","NL-ZUID-DN42","ORG-SHACK-TECH-DN42","ORG-YANE-DN42"]}
-
-```
-
-## GET /api/registry/&lt;type&gt;/&lt;object&gt;?match&amp;raw
-
-Return a JSON object with the registry data for each matching object.
-
-The keys for the object are the object paths in the form &lt;type&gt;/&lt;object name&gt;. The values depends on the raw parameter.
-
-if the raw parameter is provided, the returned object consists of a single key 'Attributes'
-which will be an array of key/value pairs exactly as held within the registry.
-
-If the raw parameter is not provided, the returned Attributes are decorated with markdown
-style links depending the relations defined in the DN42 schema. In addition a
-'Backlinks' key is added which provides an array of registry objects that
+By default results are returned as JSON objects, and the registry data is decorated
+with markdown style links depending on relations defined in the DN42 schema. For object
+results, a 'Backlinks' section is also added providing an array of registry objects that
 reference this one.
 
-If the match parameter is provided, the &lt;object&gt; is substring matched against all
-objects in the &lt;type&gt;. Matching is case insensitive.
+If the 'raw' parameter is provided, attributes are returned un-decorated exactly
+as contained in the registry.
 
-If the match parameter is not provided, an exact, case sensitive object name is required.
+Some examples will help clarify:
 
-A special object of '*' returns all objects in the type
-
-Example:
-```
-http://localhost:8042/api/registry/domain/burble.dn42?raw # return object in raw format
-http://localhost:8042/api/registry/mntner/BURBLE-MNT      # return object in decorated format
-http://localhost:8042/api/registry/aut-num/2601?match     # return all aut-num objects matching 2601
-http://localhost:8042/api/registry/schema/*               # return all schema objects
-
-# sample output (raw)
-{"domain/burble.dn42":[["domain","burble.dn42"],["descr","burble.dn42 https://dn42.burble.com/"],["admin-c","BURBLE-DN42"],["tech-c","BURBLE-DN42"],["mnt-by","BURBLE-MNT"],["nserver","ns1.burble.dn42 172.20.129.161"],["nserver","ns1.burble.dn42 fd42:4242:2601:ac53::1"],["ds-rdata","61857 13 2 bd35e3efe3325d2029fb652e01604a48b677cc2f44226eeabee54b456c67680c"],["source","DN42"]]}
-
-# sample output (decorated)
-{"mntner/BURBLE-MNT":{"Attributes":[["mntner","BURBLE-MNT"],["descr","burble.dn42 https://dn42.burble.com/"],["admin-c","[BURBLE-DN42](person/BURBLE-DN42)"],["tech-c","[BURBLE-DN42](person/BURBLE-DN42)"],["auth","pgp-fingerprint 1C08F282095CCDA432AECC657B9FE8780CFB6593"],["mnt-by","[BURBLE-MNT](mntner/BURBLE-MNT)"],["source","[DN42](registry/DN42)"]],"Backlinks":["as-set/AS4242422601:AS-DOWNSTREAM","as-set/AS4242422601:AS-TRANSIT","inetnum/172.20.129.160_27","person/BURBLE-DN42","route/172.20.129.160_27","inet6num/fd42:4242:2601::_48","mntner/BURBLE-MNT","aut-num/AS4242422601","aut-num/AS4242422602","route6/fd42:4242:2601::_48","domain/collector.dn42","domain/burble.dn42"]}}
+* Return a JSON object, with keys for each registry type and values containing a count
+of the number of registry objects for each type
 
 ```
+wget -O - -q http://localhost:8042/api/registry/ | jq
+{
+  "as-block": 8,
+  "as-set": 34,
+  "aut-num": 1486,
+  "domain": 451,
+  "inet6num": 746,
+  "inetnum": 1276,
+  "key-cert": 7,
+  "mntner": 1379,
+  "organisation": 275,
+  "person": 1388,
+  "registry": 4,
+  "role": 14,
+  "route": 892,
+  "route-set": 2,
+  "route6": 596,
+  "schema": 18,
+  "tinc-key": 25,
+  "tinc-keyset": 3
+}
 
+```
+
+* Return a list of all objects in the role type
+
+```
+wget -O - -q http://localhost:8042/api/registry/role | jq
+{
+  "role": [
+    "ORG-NETRAVNEN-DN42",
+    "PACKETPUSHERS-DN42",
+    "CCCKC-DN42",
+    "FLHB-ABUSE-DN42",
+    "NIXNODES-DN42",
+    "ORG-SHACK-ABUSE-DN42",
+    "ORG-SHACK-TECH-DN42",
+    "ORG-YANE-DN42",
+    "SOURIS-DN42",
+    "CCCHB-ABUSE-DN42",
+    "MAGLAB-DN42",
+    "NL-ZUID-DN42",
+    "ORG-SHACK-ADMIN-DN42",
+    "ALENAN-DN42"
+  ]
+}
+```
+
+* Returns a list of all objects in types that match 'route'
+
+```
+wget -O - -q http://localhost:8042/api/registry/*route | jq
+{
+  "route": [
+    "172.20.28.0_27",
+    "172.23.220.0_24",
+    "172.23.82.0_25",
+    "10.149.0.0_16",
+
+...
+
+    "172.20.128.0_27",
+    "172.22.127.32_27"
+  ],
+  "route-set": [
+    "RS-DN42",
+    "RS-DN42-NATIVE"
+  ],
+  "route6": [
+    "fd42:df42::_48",
+    "fd5c:0f0f:39fc::_48",
+
+...
+
+    "fd16:c638:3d7c::_48",
+    "fd23::_48"
+  ]
+}
+```
+
+* Returns the mntner/BURBLE-MNT object (in decorated format)
+
+```
+wget -O - -q http://localhost:8042/api/registry/mntner/BURBLE-MNT | jq
+{
+  "mntner/BURBLE-MNT": {
+    "Attributes": [
+      [
+        "mntner",
+        "BURBLE-MNT"
+      ],
+      [
+        "descr",
+        "burble.dn42 https://dn42.burble.com/"
+      ],
+      [
+        "admin-c",
+        "[BURBLE-DN42](person/BURBLE-DN42)"
+      ],
+      [
+        "tech-c",
+        "[BURBLE-DN42](person/BURBLE-DN42)"
+      ],
+      [
+        "auth",
+        "pgp-fingerprint 1C08F282095CCDA432AECC657B9FE8780CFB6593"
+      ],
+      [
+        "mnt-by",
+        "[BURBLE-MNT](mntner/BURBLE-MNT)"
+      ],
+      [
+        "source",
+        "[DN42](registry/DN42)"
+      ]
+    ],
+    "Backlinks": [
+      "aut-num/AS4242422602",
+      "aut-num/AS4242422601",
+      "mntner/BURBLE-MNT",
+      "route/172.20.129.160_27",
+      "as-set/AS4242422601:AS-DOWNSTREAM",
+      "as-set/AS4242422601:AS-TRANSIT",
+      "person/BURBLE-DN42",
+      "inet6num/fd42:4242:2601::_48",
+      "domain/burble.dn42",
+      "domain/collector.dn42",
+      "route6/fd42:4242:2601::_48",
+      "inetnum/172.20.129.160_27"
+    ]
+  }
+}
+```
+
+* Returns error 404, exact searches are case sensitive
+
+```
+wget -O - -q http://localhost:8042/api/registry/mntner/burble-mnt | jq
+```
+
+* Returns domain names matching 'burble' in raw format
+
+```
+wget -O - -q http://localhost:8042/api/registry/domain/*burble?raw | jq
+{
+  "domain/burble.dn42": [
+    [
+      "domain",
+      "burble.dn42"
+    ],
+    [
+      "descr",
+      "burble.dn42 https://dn42.burble.com/"
+    ],
+    [
+      "admin-c",
+      "BURBLE-DN42"
+    ],
+    [
+      "tech-c",
+      "BURBLE-DN42"
+    ],
+    [
+      "mnt-by",
+      "BURBLE-MNT"
+    ],
+    [
+      "nserver",
+      "ns1.burble.dn42 172.20.129.161"
+    ],
+    [
+      "nserver",
+      "ns1.burble.dn42 fd42:4242:2601:ac53::1"
+    ],
+    [
+      "ds-rdata",
+      "61857 13 2 bd35e3efe3325d2029fb652e01604a48b677cc2f44226eeabee54b456c67680c"
+    ],
+    [
+      "source",
+      "DN42"
+    ]
+  ]
+}
+```
+
+* Returns all objects matching 172.20.0
+
+```
+wget -O - -q http://localhost:8042/api/registry/*/*172.20.0 | jq
+{
+  "inetnum/172.20.0.0_14": {
+    "Attributes": [
+      [
+        "inetnum",
+        "172.20.0.0 - 172.23.255.255"
+      ],
+      [
+        "cidr",
+        "172.20.0.0/14"
+      ],
+
+... and so on
+```
+
+* Returns the nic-hdl attribute for all person objects
+
+```
+wget -O - -q http://localhost:8042/api/registry/person/*/nic-hdl | jq
+{
+  "person/0RIGO-DN42": {
+    "nic-hdl": [
+      "0RIGO-DN42"
+    ]
+  },
+  "person/0XDRAGON-DN42": {
+    "nic-hdl": [
+      "0XDRAGON-DN42"
+    ]
+  },
+  "person/1714-DN42": {
+    "nic-hdl": [
+      "1714-DN42"
+    ]
+  },
+
+... and so on
+```
+
+* return raw contact (-c) attributes in aut-num objects that contain 'burble'
+
+```
+wget -O - -q http://localhost:8042/api/registry/aut-num/*/*-c/*burble?raw | jq
+{
+  "aut-num/AS4242422601": {
+    "admin-c": [
+      "BURBLE-DN42"
+    ],
+    "tech-c": [
+      "BURBLE-DN42"
+    ]
+  },
+  "aut-num/AS4242422602": {
+    "admin-c": [
+      "BURBLE-DN42"
+    ],
+    "tech-c": [
+      "BURBLE-DN42"
+    ]
+  }
+}
+```

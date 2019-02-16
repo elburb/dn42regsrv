@@ -8,6 +8,7 @@ package main
 
 import (
 	"encoding/json"
+	//	"fmt"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 	"net/http"
@@ -19,13 +20,15 @@ import (
 // register the api
 
 func init() {
-	RegisterAPIEndpoint(InitRegAPI)
+	EventBus.Listen("APIEndpoint", InitRegistryAPI)
 }
 
 //////////////////////////////////////////////////////////////////////////
 // called from main to initialise the API routing
 
-func InitRegAPI(router *mux.Router) {
+func InitRegistryAPI(params ...interface{}) {
+
+	router := params[0].(*mux.Router)
 
 	s := router.
 		Methods("GET").
@@ -38,6 +41,8 @@ func InitRegAPI(router *mux.Router) {
 
 	s.HandleFunc("/{type}", regTypeHandler)
 	s.HandleFunc("/{type}/{object}", regObjectHandler)
+	s.HandleFunc("/{type}/{object}/{key}", regKeyHandler)
+	s.HandleFunc("/{type}/{object}/{key}/{attribute}", regAttributeHandler)
 
 	log.Info("Registry API installed")
 }
@@ -64,6 +69,242 @@ func responseJSON(w http.ResponseWriter, v interface{}) {
 }
 
 //////////////////////////////////////////////////////////////////////////
+// filter functions
+
+// return a list of types that match the filter
+func filterTypes(filter string) []*RegType {
+
+	var rtypes []*RegType = nil
+
+	// check if filter starts with '*'
+	if filter[0] == '*' {
+		// try and match the filter against all reg types
+
+		filter = strings.ToLower(filter[1:])
+
+		// special case, if the filter was '*' return all types
+		if len(filter) == 0 {
+
+			rtypes = make([]*RegType, 0, len(RegistryData.Types))
+			for _, rtype := range RegistryData.Types {
+				rtypes = append(rtypes, rtype)
+			}
+
+		} else {
+
+			// otherwise substring match the types
+			for _, rtype := range RegistryData.Types {
+				lname := strings.ToLower(rtype.Ref)
+				if strings.Contains(lname, filter) {
+					// matched, add it to the list
+					rtypes = append(rtypes, rtype)
+				}
+			}
+
+		}
+
+	} else {
+		// perform an exact match with one entry
+
+		rtype := RegistryData.Types[filter]
+		if rtype != nil {
+			// return a single answer
+			rtypes = []*RegType{rtype}
+		}
+
+	}
+
+	return rtypes
+}
+
+// return a list of objects from a set of types that match a filter
+func filterObjects(rtypes []*RegType, filter string) []*RegObject {
+
+	var objects []*RegObject = nil
+
+	// check if filter starts with '*'
+	if filter[0] == '*' {
+		// try and match objects against the filter
+
+		filter = strings.ToLower(filter[1:])
+
+		// for each type
+		for _, rtype := range rtypes {
+
+			// special case, if the filter was '*' return all objects
+			if len(filter) == 0 {
+
+				objs := make([]*RegObject, 0, len(rtype.Objects))
+				for _, object := range rtype.Objects {
+					objs = append(objs, object)
+				}
+				objects = append(objects, objs...)
+
+			} else {
+				// otherwise substring match the object names
+
+				for _, object := range rtype.Objects {
+					lname := strings.ToLower(object.Ref)
+					if strings.Contains(lname, filter) {
+						// matched, add it to the list
+						objects = append(objects, object)
+					}
+				}
+
+			}
+
+		}
+
+	} else {
+		// perform an exact match against one object for each type
+
+		for _, rtype := range rtypes {
+
+			object := rtype.Objects[filter]
+			if object != nil {
+				// add the object
+				objects = append(objects, object)
+			}
+		}
+
+	}
+
+	return objects
+}
+
+// return a list of key indices matching the filter
+func filterKeys(rtypes []*RegType, filter string) []*RegKeyIndex {
+
+	var ix []*RegKeyIndex = nil
+
+	// check if filter starts with '*'
+	if filter[0] == '*' {
+		// try and match keys against the filter
+
+		filter = strings.ToLower(filter[1:])
+
+		// for each type
+		for _, rtype := range rtypes {
+			ref := rtype.Ref
+			schema := RegistryData.Schema[ref]
+
+			// special case, if the filter was '*' return all indices
+			if len(filter) == 0 {
+
+				tmp := make([]*RegKeyIndex, 0, len(schema.KeyIndex))
+				for _, keyix := range schema.KeyIndex {
+					tmp = append(tmp, keyix)
+				}
+				ix = append(ix, tmp...)
+
+			} else {
+				// otherwise substring match the key names
+
+				for kname, keyix := range schema.KeyIndex {
+					kname = strings.ToLower(kname)
+					if strings.Contains(kname, filter) {
+						ix = append(ix, keyix)
+					}
+				}
+
+			}
+		}
+
+	} else {
+		// perform an exact match, one key for each type
+
+		for _, rtype := range rtypes {
+			ref := rtype.Ref
+			schema := RegistryData.Schema[ref]
+			keyix := schema.KeyIndex[filter]
+			if keyix != nil {
+				// add the index
+				ix = append(ix, keyix)
+			}
+		}
+
+	}
+
+	return ix
+}
+
+// helper func to determine if an attribute matches a filter
+func matchAttribute(attribute *RegAttribute,
+	filter string, isExact bool) bool {
+
+	if isExact {
+
+		return filter == attribute.RawValue
+
+	} else {
+
+		l := strings.ToLower(attribute.RawValue)
+		return strings.Contains(l, filter)
+
+	}
+}
+
+// return a map of objects and attribute values that match the filter
+func filterAttributes(ix []*RegKeyIndex, objects []*RegObject,
+	filter string, raw bool) map[string]map[string][]string {
+
+	result := make(map[string]map[string][]string)
+
+	// pre-calculate the search type
+	isExact := true
+	isAll := false
+
+	if filter[0] == '*' {
+		isExact = false
+		filter = strings.ToLower(filter[1:])
+		if len(filter) == 0 {
+			isAll = true
+		}
+	}
+
+	// for each key index
+	for _, keyix := range ix {
+
+		// for each object
+		for _, object := range objects {
+
+			// attributes in this object that match this key
+			attributes := keyix.Objects[object]
+			if attributes != nil {
+				// this object has at least one relevant key
+
+				// match the attributes
+				for _, attribute := range attributes {
+					if isAll || matchAttribute(attribute, filter, isExact) {
+						// match found !
+
+						objmap := result[object.Ref]
+						if objmap == nil {
+							objmap = make(map[string][]string)
+							result[object.Ref] = objmap
+						}
+
+						// append the result
+						var value *string
+						if raw {
+							value = &attribute.RawValue
+						} else {
+							value = &attribute.Value
+						}
+
+						objmap[keyix.Ref] = append(objmap[keyix.Ref], *value)
+					}
+				}
+			}
+
+		}
+
+	}
+
+	return result
+}
+
+//////////////////////////////////////////////////////////////////////////
 // root handler, lists all types within the registry
 
 func regRootHandler(w http.ResponseWriter, r *http.Request) {
@@ -83,62 +324,26 @@ func regTypeHandler(w http.ResponseWriter, r *http.Request) {
 
 	// request parameters
 	vars := mux.Vars(r)
-	query := r.URL.Query()
+	tFilter := vars["type"] // type filter
 
-	typeName := vars["type"] // type name to list
-	match := query["match"]  // single query or match
-
-	// special case to return all types
-	all := false
-	if typeName == "*" {
-		match = []string{}
-		all = true
-	}
-
-	// results will hold the types to return
-	var results []*RegType
-
-	//	check match type
-	if match == nil {
-		// exact match
-
-		// check the type object exists
-		rType := RegistryData.Types[typeName]
-		if rType == nil {
-			http.Error(w, "No types matching '"+typeName+"' found", http.StatusNotFound)
-			return
-		}
-
-		// return just a single result
-		results = []*RegType{rType}
-
-	} else {
-		// substring match
-
-		// comparisons are lower case
-		typeName = strings.ToLower(typeName)
-
-		// walk through the types and filter to the results list
-		results = make([]*RegType, 0)
-		for key, rType := range RegistryData.Types {
-			if all || strings.Contains(strings.ToLower(key), typeName) {
-				// match found, add to the list
-				results = append(results, rType)
-			}
-		}
-
+	// match registry types against the filter
+	rtypes := filterTypes(tFilter)
+	if rtypes == nil {
+		http.Error(w, "No objects matching '"+tFilter+"' found",
+			http.StatusNotFound)
+		return
 	}
 
 	// construct the response
 	response := make(map[string][]string)
-	for _, rType := range results {
+	for _, rtype := range rtypes {
 
-		objects := make([]string, 0, len(rType.Objects))
-		for key := range rType.Objects {
+		objects := make([]string, 0, len(rtype.Objects))
+		for key := range rtype.Objects {
 			objects = append(objects, key)
 		}
 
-		response[rType.Ref] = objects
+		response[rtype.Ref] = objects
 	}
 
 	responseJSON(w, response)
@@ -159,58 +364,24 @@ func regObjectHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	query := r.URL.Query()
 
-	typeName := vars["type"]  // object type
-	objName := vars["object"] // object name or match
-	match := query["match"]   // single query or match
+	tFilter := vars["type"]   // type filter
+	oFilter := vars["object"] // object filter
 	raw := query["raw"]       // raw or decorated results
 
-	// special case to return all objects
-	all := false
-	if objName == "*" {
-		match = []string{}
-		all = true
-	}
-
-	// verify the type exists
-	rType := RegistryData.Types[typeName]
-	if rType == nil {
-		http.Error(w, "No types matching '"+typeName+"' found",
+	// select the type(s)
+	rtypes := filterTypes(tFilter)
+	if rtypes == nil {
+		http.Error(w, "No objects matching '"+tFilter+"' found",
 			http.StatusNotFound)
 		return
 	}
 
-	// results will hold the objects to return
-	var results []*RegObject
-
-	// check match type
-	if match == nil {
-		// exact match
-
-		// check the object exists
-		object := rType.Objects[objName]
-		if object == nil {
-			http.Error(w, "No objects matching '"+objName+"' found",
-				http.StatusNotFound)
-			return
-		}
-
-		// then just create a results list with one object
-		results = []*RegObject{object}
-
-	} else {
-		// substring matching
-
-		// comparisons are lower case
-		objName = strings.ToLower(objName)
-
-		// walk through the type objects and filter to the results list
-		results = make([]*RegObject, 0)
-		for key, object := range rType.Objects {
-			if all || strings.Contains(strings.ToLower(key), objName) {
-				// match found, add to the list
-				results = append(results, object)
-			}
-		}
+	// then select the objects
+	objects := filterObjects(rtypes, oFilter)
+	if objects == nil {
+		http.Error(w, "No objects matching '"+tFilter+
+			"/"+oFilter+"' found", http.StatusNotFound)
+		return
 	}
 
 	// collate the results in to the response data
@@ -219,7 +390,7 @@ func regObjectHandler(w http.ResponseWriter, r *http.Request) {
 		response := make(map[string]RegObjectResponse)
 
 		// for each object in the results
-		for _, object := range results {
+		for _, object := range objects {
 
 			// copy the raw attributes
 			attributes := make([][2]string, len(object.Data))
@@ -247,7 +418,7 @@ func regObjectHandler(w http.ResponseWriter, r *http.Request) {
 		response := make(map[string][][2]string)
 
 		// for each object in the results
-		for _, object := range results {
+		for _, object := range objects {
 
 			attributes := make([][2]string, len(object.Data))
 			response[object.Ref] = attributes
@@ -260,6 +431,106 @@ func regObjectHandler(w http.ResponseWriter, r *http.Request) {
 
 		responseJSON(w, response)
 	}
+
+}
+
+//////////////////////////////////////////////////////////////////////////
+// key handler returns attribute data matching the key
+
+func regKeyHandler(w http.ResponseWriter, r *http.Request) {
+
+	// request parameters
+	vars := mux.Vars(r)
+	query := r.URL.Query()
+
+	tFilter := vars["type"]   // type filter
+	oFilter := vars["object"] // object filter
+	kFilter := vars["key"]    // key filter
+	raw := query["raw"]       // raw or decorated results
+
+	// select the type(s)
+	rtypes := filterTypes(tFilter)
+	if rtypes == nil {
+		http.Error(w, "No objects matching '"+tFilter+"' found",
+			http.StatusNotFound)
+		return
+	}
+
+	// select the key indices
+	ix := filterKeys(rtypes, kFilter)
+	if rtypes == nil {
+		http.Error(w, "No objects matching '"+tFilter+"/*/"+
+			kFilter+"' found", http.StatusNotFound)
+		return
+	}
+
+	// select the objects
+	objects := filterObjects(rtypes, oFilter)
+	if objects == nil {
+		http.Error(w, "No objects matching '"+tFilter+
+			"/"+oFilter+"' found", http.StatusNotFound)
+		return
+	}
+
+	// select objects that match the keys
+	amap := filterAttributes(ix, objects, "*", (raw != nil))
+	if len(amap) == 0 {
+		http.Error(w, "No attributes matching '"+tFilter+"/"+
+			oFilter+"/"+kFilter+"' found", http.StatusNotFound)
+		return
+	}
+
+	responseJSON(w, amap)
+}
+
+//////////////////////////////////////////////////////////////////////////
+// attribute handler returns attribute data matching the attribute
+
+func regAttributeHandler(w http.ResponseWriter, r *http.Request) {
+
+	// request parameters
+	vars := mux.Vars(r)
+	query := r.URL.Query()
+
+	tFilter := vars["type"]      // type filter
+	oFilter := vars["object"]    // object filter
+	kFilter := vars["key"]       // key filter
+	aFilter := vars["attribute"] // attribute filter
+	raw := query["raw"]          // raw or decorated results
+
+	// select the type(s)
+	rtypes := filterTypes(tFilter)
+	if rtypes == nil {
+		http.Error(w, "No objects matching '"+tFilter+"' found",
+			http.StatusNotFound)
+		return
+	}
+
+	// select the key indices
+	ix := filterKeys(rtypes, kFilter)
+	if rtypes == nil {
+		http.Error(w, "No objects matching '"+tFilter+"/*/"+
+			kFilter+"' found", http.StatusNotFound)
+		return
+	}
+
+	// then select the objects
+	objects := filterObjects(rtypes, oFilter)
+	if objects == nil {
+		http.Error(w, "No objects matching '"+tFilter+
+			"/"+oFilter+"' found", http.StatusNotFound)
+		return
+	}
+
+	// select objects that match the keys
+	amap := filterAttributes(ix, objects, aFilter, (raw != nil))
+	if len(amap) == 0 {
+		http.Error(w, "No attributes matching '"+tFilter+"/"+
+			oFilter+"/"+kFilter+"/"+aFilter+"' found", http.StatusNotFound)
+		return
+	}
+
+	responseJSON(w, amap)
 
 }
 

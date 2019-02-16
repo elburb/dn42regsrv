@@ -18,14 +18,26 @@ import (
 )
 
 //////////////////////////////////////////////////////////////////////////
-// list of API endpoints
+// simple event bus
 
-type InitEndpointFunc = func(route *mux.Router)
+type NotifyFunc func(...interface{})
+type SimpleEventBus map[string][]NotifyFunc
 
-var apiEndpoints = make([]InitEndpointFunc, 0)
+var EventBus = make(SimpleEventBus)
 
-func RegisterAPIEndpoint(f InitEndpointFunc) {
-	apiEndpoints = append(apiEndpoints, f)
+// add a listener to an event
+func (bus SimpleEventBus) Listen(event string, nfunc NotifyFunc) {
+	bus[event] = append(bus[event], nfunc)
+}
+
+// fire notifications for an event
+func (bus SimpleEventBus) Fire(event string, params ...interface{}) {
+	funcs := bus[event]
+	if funcs != nil {
+		for _, nfunc := range funcs {
+			nfunc(params...)
+		}
+	}
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -111,11 +123,9 @@ func main() {
 	// log all access
 	router.Use(requestLogger)
 
-	// initialise API routes
+	// add API routes
 	subr := router.PathPrefix("/api").Subrouter()
-	for _, epInit := range apiEndpoints {
-		epInit(subr)
-	}
+	EventBus.Fire("APIEndpoint", subr)
 
 	// initialise static routes
 	InstallStaticRoutes(router, *staticRoot)

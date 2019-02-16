@@ -49,10 +49,15 @@ type RegAttributeSchema struct {
 	Relations []*RegType
 }
 
+type RegKeyIndex struct {
+	Ref     string
+	Objects map[*RegObject][]*RegAttribute
+}
+
 type RegTypeSchema struct {
 	Ref        string
 	Attributes map[string]*RegAttributeSchema
-	KeyIndex   map[string]map[*RegObject][]*RegAttribute
+	KeyIndex   map[string]*RegKeyIndex
 }
 
 // the registry itself
@@ -146,15 +151,18 @@ func (schema *RegTypeSchema) validate(attributes []*RegAttribute) []*RegAttribut
 func (schema *RegTypeSchema) addKeyIndex(object *RegObject,
 	attribute *RegAttribute) {
 
-	objmap := schema.KeyIndex[attribute.Key]
+	keyix := schema.KeyIndex[attribute.Key]
 	// create a new object map if it didn't exist
-	if objmap == nil {
-		objmap = make(map[*RegObject][]*RegAttribute)
-		schema.KeyIndex[attribute.Key] = objmap
+	if keyix == nil {
+		keyix = &RegKeyIndex{
+			Ref:     attribute.Key,
+			Objects: make(map[*RegObject][]*RegAttribute),
+		}
+		schema.KeyIndex[attribute.Key] = keyix
 	}
 
 	// add the object/attribute reference
-	objmap[object] = append(objmap[object], attribute)
+	keyix.Objects[object] = append(keyix.Objects[object], attribute)
 }
 
 // object functions
@@ -313,10 +321,9 @@ func loadAttributes(path string) []*RegAttribute {
 	for scanner.Scan() {
 
 		line := strings.TrimRight(scanner.Text(), "\r\n")
-		runes := []rune(line)
 
 		// lines starting with '+' denote an empty line
-		if runes[0] == rune('+') {
+		if line[0] == '+' {
 
 			// concatenate a \n on to the previous attribute value
 			attributes[len(attributes)-1].RawValue += "\n"
@@ -328,12 +335,12 @@ func loadAttributes(path string) []*RegAttribute {
 			if ix == -1 || ix >= 20 {
 				// couldn't find one
 
-				if len(runes) <= 20 {
+				if len(line) <= 20 {
 					// hmmm, the line was shorter than 20 characters
 					// something is amiss
 
 					log.WithFields(log.Fields{
-						"length": len(runes),
+						"length": len(line),
 						"path":   path,
 						"line":   line,
 					}).Warn("Short line detected")
@@ -343,7 +350,7 @@ func loadAttributes(path string) []*RegAttribute {
 					// line is a continuation of the previous line, so
 					// concatenate the value on to the previous attribute value
 					attributes[len(attributes)-1].RawValue +=
-						"\n" + string(runes[20:])
+						"\n" + string(line[20:])
 
 				}
 			} else {
@@ -351,16 +358,16 @@ func loadAttributes(path string) []*RegAttribute {
 
 				// is there actually a value ?
 				var value string
-				if len(runes) <= 20 {
+				if len(line) <= 20 {
 					// blank value
 					value = ""
 				} else {
-					value = string(runes[20:])
+					value = string(line[20:])
 				}
 
 				// create a new attribute
 				a := &RegAttribute{
-					Key:      string(runes[:ix]),
+					Key:      string(line[:ix]),
 					RawValue: value,
 				}
 				attributes = append(attributes, a)
@@ -395,7 +402,7 @@ func (registry *Registry) parseSchema() {
 		typeSchema := &RegTypeSchema{
 			Ref:        typeName,
 			Attributes: make(map[string]*RegAttributeSchema),
-			KeyIndex:   make(map[string]map[*RegObject][]*RegAttribute),
+			KeyIndex:   make(map[string]*RegKeyIndex),
 		}
 
 		// ensure the type exists
