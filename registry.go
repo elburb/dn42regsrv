@@ -63,6 +63,7 @@ type RegTypeSchema struct {
 // the registry itself
 
 type Registry struct {
+	Commit string
 	Schema map[string]*RegTypeSchema
 	Types  map[string]*RegType
 }
@@ -187,12 +188,13 @@ func (object *RegObject) addBacklink(ref *RegObject) {
 //////////////////////////////////////////////////////////////////////////
 // reload the registry
 
-func reloadRegistry(path string) {
+func reloadRegistry(path string, commit string) {
 
 	log.Debug("Reloading registry")
 
 	// r will become the new registry data
 	registry := &Registry{
+		Commit: commit,
 		Schema: make(map[string]*RegTypeSchema),
 		Types:  make(map[string]*RegType),
 	}
@@ -214,6 +216,9 @@ func reloadRegistry(path string) {
 
 	// mark relationships
 	registry.decorate()
+
+	// trigger updates in any other modules
+	EventBus.Fire("RegistryUpdate", registry, path)
 
 	// swap in the new registry data
 	RegistryData = registry
@@ -643,7 +648,7 @@ func InitialiseRegistryData(regDir string, refresh time.Duration,
 	// initialise the previous commit hash
 	// and do initial load from registry
 	previousCommit = getCommitHash(regDir, gitPath)
-	reloadRegistry(dataPath)
+	reloadRegistry(dataPath, previousCommit)
 
 	go func() {
 
@@ -667,7 +672,7 @@ func InitialiseRegistryData(regDir string, refresh time.Duration,
 				}).Info("Registry has changed, refresh started")
 
 				// refresh
-				reloadRegistry(dataPath)
+				reloadRegistry(dataPath, currentCommit)
 
 				// update commit
 				previousCommit = currentCommit

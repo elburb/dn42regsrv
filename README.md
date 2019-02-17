@@ -16,6 +16,7 @@ A public instance of the API and explorer web app can be accessed via:
   basic web applications utilising the API (such as the included DN42 Registry Explorer)
 * Automatic pull from the DN42 git repository to keep the registry up to date
 * Includes a responsive web app for exploring the registry
+* API endpoints for ROA data in JSON, and bird formats
 
 ## Building
 
@@ -60,8 +61,6 @@ Please feel free to raise issues or create pull requests for the project git rep
 ### Server
 
 - Add WHOIS interface
-- Add endpoints for ROA data
-- Add attribute searches
 
 ### DN42 Registry Explorer Web App
 

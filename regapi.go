@@ -7,7 +7,6 @@ package main
 //////////////////////////////////////////////////////////////////////////
 
 import (
-	"encoding/json"
 	//	"fmt"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
@@ -45,27 +44,6 @@ func InitRegistryAPI(params ...interface{}) {
 	s.HandleFunc("/{type}/{object}/{key}/{attribute}", regAttributeHandler)
 
 	log.Info("Registry API installed")
-}
-
-//////////////////////////////////////////////////////////////////////////
-// handler utility funcs
-
-func responseJSON(w http.ResponseWriter, v interface{}) {
-
-	// for response time testing
-	//time.Sleep(time.Second)
-
-	// marshal the JSON string
-	data, err := json.Marshal(v)
-	if err != nil {
-		log.WithFields(log.Fields{
-			"error": err,
-		}).Error("Failed to marshal JSON")
-	}
-
-	// write back to http handler
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(data)
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -313,7 +291,7 @@ func regRootHandler(w http.ResponseWriter, r *http.Request) {
 	for _, rType := range RegistryData.Types {
 		response[rType.Ref] = len(rType.Objects)
 	}
-	responseJSON(w, response)
+	ResponseJSON(w, response)
 
 }
 
@@ -346,7 +324,7 @@ func regTypeHandler(w http.ResponseWriter, r *http.Request) {
 		response[rtype.Ref] = objects
 	}
 
-	responseJSON(w, response)
+	ResponseJSON(w, response)
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -411,7 +389,7 @@ func regObjectHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		responseJSON(w, response)
+		ResponseJSON(w, response)
 
 	} else {
 		// provide a response with just the raw registry data
@@ -429,7 +407,7 @@ func regObjectHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		responseJSON(w, response)
+		ResponseJSON(w, response)
 	}
 
 }
@@ -480,7 +458,7 @@ func regKeyHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	responseJSON(w, amap)
+	ResponseJSON(w, amap)
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -530,7 +508,7 @@ func regAttributeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	responseJSON(w, amap)
+	ResponseJSON(w, amap)
 
 }
 

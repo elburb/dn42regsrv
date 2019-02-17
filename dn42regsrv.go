@@ -8,6 +8,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 	flag "github.com/spf13/pflag"
@@ -38,6 +39,27 @@ func (bus SimpleEventBus) Fire(event string, params ...interface{}) {
 			nfunc(params...)
 		}
 	}
+}
+
+//////////////////////////////////////////////////////////////////////////
+// utility func for returning JSON from an API endpoint
+
+func ResponseJSON(w http.ResponseWriter, v interface{}) {
+
+	// for response time testing
+	//time.Sleep(time.Second)
+
+	// marshal the JSON string
+	data, err := json.Marshal(v)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"error": err,
+		}).Error("Failed to marshal JSON")
+	}
+
+	// write back to http handler
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(data)
 }
 
 //////////////////////////////////////////////////////////////////////////

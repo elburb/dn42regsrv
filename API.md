@@ -1,16 +1,122 @@
 # dn42regsrv API Description
 
+## Route Origin Authorisation (ROA) API
+
+Route Origin Authorisation (ROA) data can be obtained from the server in
+JSON and bird formats.
+
+### JSON format output
+
+```
+GET /api/roa/json
+```
+
+Provides IPv4 and IPv6 ROAs in JSON format, suitable for use with
+[gortr](https://github.com/cloudflare/gortr). 
+
+Example Output:
+```
+wget -O - -q http://localhost:8042/api/roa/json | jq
+```
+
+```
+{
+  "metadata": {
+    "counts": 1564,
+    "generated": 1550402199,
+    "valid": 1550445399
+  },
+  "roas": [
+    {
+      "prefix": "172.23.128.0/26",
+      "maxLength": 29,
+      "asn": "AS4242422747"
+    },
+    {
+      "prefix": "172.22.129.192/26",
+      "maxLength": 29,
+      "asn": "AS4242423976"
+    },
+    {
+      "prefix": "10.110.0.0/16",
+      "maxLength": 24,
+      "asn": "AS65110"
+    },
+
+... and so on
+```
+
+### Bird format output
+
+```
+GET /api/roa/bird/{bird version}/{IP family}
+```
+
+Provides ROA data suitable for including in to bird.
+
+{bird version} must be either 1 or 2
+
+{IP family} can be 4, 6 or 46 to provide both IPv4 and IPv6 results
+
+
+Example Output:
+```
+wget -O - -q http://localhost:8042/api/roa/bird/1/4
+```
+
+```
+#
+# dn42regsrv ROA Generator
+# Last Updated: 2019-02-17 11:16:39.668799525 +0000 GMT m=+0.279049704
+# Commit: 3cbc349bf770493c016888ff785227ded2a7d866
+#
+roa 172.23.128.0/26 max 29 as 4242422747;
+roa 172.22.129.192/26 max 29 as 4242423976;
+roa 10.110.0.0/16 max 24 as 65110;
+roa 172.20.164.0/26 max 29 as 4242423023;
+roa 172.20.135.200/29 max 29 as 4242420448;
+roa 10.65.0.0/20 max 24 as 4242420420;
+roa 172.20.149.136/29 max 29 as 4242420234;
+roa 10.160.0.0/13 max 24 as 65079;
+roa 10.169.0.0/16 max 24 as 65534;
+
+... and so on
+```
+
+```
+wget -O - -q http://localhost:8042/api/roa/bird/2/6
+```
+
+```
+#
+# dn42regsrv ROA Generator
+# Last Updated: 2019-02-17 11:16:39.668799525 +0000 GMT m=+0.279049704
+# Commit: 3cbc349bf770493c016888ff785227ded2a7d866
+#
+route fdc3:10cd:ae9d::/48 max 64 as 4242420789;
+route fd41:9805:7b69:4000::/51 max 64 as 4242420846;
+route fd41:9805:7b69:4000::/51 max 64 as 4242420845;
+route fd41:9805:7b69:4000::/51 max 64 as 4242420847;
+route fddf:ebfd:a801:2331::/64 max 64 as 65530;
+route fd42:1a2b:de57::/48 max 64 as 4242422454;
+route fd42:7879:7879::/48 max 64 as 4242421787;
+
+... and so on
+```
+
 ## Registry API
 
 The general form of the registry query API is:
 
+```
 GET /api/registry/{type}/{object}/{key}/{attribute}?raw
+```
 
 * Prefixing with a '*' performs a case insensitive, substring match
 * A '*' on its own means match everything
 * Otherwise an exact, case sensitive match is performed
 
-By default results are returned as JSON objects, and the registry data is decorated
+By default, results are returned as JSON objects, and the registry data is decorated
 with markdown style links depending on relations defined in the DN42 schema. For object
 results, a 'Backlinks' section is also added providing an array of registry objects that
 reference this one.
