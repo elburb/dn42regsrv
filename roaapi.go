@@ -57,6 +57,12 @@ type ROA struct {
 
 var ROAData *ROA
 
+// set validity period for one week
+// this might appear to be a long time, but is intended to provide
+// enough time to prevent expiry of the data between real registry
+// updates (which may only happen infrequently)
+const ROA_JSON_VALIDITY_PERIOD = (7 * 24)
+
 type ROAMetaData struct {
 	Counts        uint   `json:"counts"`
 	Generated     uint32 `json:"generated"`
@@ -95,6 +101,18 @@ func InitROAAPI(params ...interface{}) {
 
 // return JSON formatted ROA data suitable for use with GoRTR
 func roaJSONHandler(w http.ResponseWriter, r *http.Request) {
+
+	// check validity period of returned data
+	tnow := uint32(time.Now().Unix())
+	valid := ROAJSONResponse.MetaData.Valid
+
+	// check if validity period is close to expiry
+	if (tnow > valid) ||
+		((valid - tnow) < (ROA_JSON_VALIDITY_PERIOD / 4)) {
+		// if so extend the validity period
+		ROAJSONResponse.MetaData.Valid += (ROA_JSON_VALIDITY_PERIOD * 3600)
+	}
+
 	ResponseJSON(w, ROAJSONResponse)
 }
 
@@ -173,7 +191,7 @@ func ROAUpdate(params ...interface{}) {
 	response := &ROAJSON{
 		MetaData: ROAMetaData{
 			Generated: utime,
-			Valid:     utime + (12 * 3600), // valid for 12 hours
+			Valid:     utime + (ROA_JSON_VALIDITY_PERIOD * 3600),
 		},
 	}
 
