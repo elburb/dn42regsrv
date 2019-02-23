@@ -59,6 +59,7 @@ func ResponseJSON(w http.ResponseWriter, v interface{}) {
 
 	// write back to http handler
 	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Write(data)
 }
 

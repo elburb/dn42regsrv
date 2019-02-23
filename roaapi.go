@@ -138,6 +138,8 @@ func roaBirdHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "text/plain")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
 	fmt.Fprintf(w, "#\n# dn42regsrv ROA Generator\n# Last Updated: %s\n"+
 		"# Commit: %s\n#\n", ROAData.CTime.String(), ROAData.Commit)
 
