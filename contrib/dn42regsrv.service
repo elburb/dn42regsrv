@@ -14,6 +14,17 @@ User=regsrv
 Group=registry
 Type=simple
 Restart=on-failure
+# service hardening
+ProtectSystem=strict
+ReadOnlyPaths=/home/regsrv/go/src/git.dn42.us/burble/dn42regsrv/StaticRoot
+ReadWritePaths=/home/regsrv/registry
+NoNewPrivileges=yes
+ProtectControlGroups=yes
+PrivateTmp=yes
+PrivateDevices=yes
+DevicePolicy=closed
+MemoryDenyWriteExecute=yes
+#
 ExecStart=/home/regsrv/go/bin/dn42regsrv \
      -s /home/regsrv/go/src/git.dn42.us/burble/dn42regsrv/StaticRoot \
      -d /home/regsrv/registry
