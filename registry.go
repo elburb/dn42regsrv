@@ -83,6 +83,23 @@ func RegistryMakePath(t string, o string) string {
 	return t + "/" + o
 }
 
+func RegistrySplitPath(p string) (string, string) {
+	tmp := strings.Split(p, "/")
+	if len(tmp) != 2 {
+		return "", ""
+	}
+	return tmp[0], tmp[1]
+}
+
+func (registry *Registry) GetObject(path string) *RegObject {
+	rtname, objname := RegistrySplitPath(path)
+	rtype := registry.Types[rtname]
+	if rtype == nil {
+		return nil
+	}
+	return rtype.Objects[objname]
+}
+
 // attribute functions
 
 // nothing here

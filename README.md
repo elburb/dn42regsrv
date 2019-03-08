@@ -17,6 +17,7 @@ A public instance of the API and explorer web app can be accessed via:
 * Automatic pull from the DN42 git repository to keep the registry up to date
 * Includes a responsive web app for exploring the registry
 * API endpoints for ROA data in JSON, and bird formats
+* API endpoint to support the creation of DNS root zone records
 
 ## Building
 

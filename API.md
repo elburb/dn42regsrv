@@ -382,3 +382,66 @@ wget -O - -q http://localhost:8042/api/registry/aut-num/*/*-c/*burble?raw | jq
   }
 }
 ```
+
+## DNS Root Zone API
+
+The DNS API provides a list of resource records that can be used to create a root zone for DN42
+related domains. By polling the API, DNS servers are able to keep their root zone delegations and
+DNSSEC records up to date.
+
+
+```
+GET /api/dns/root-zone?format={[json|bind]}
+```
+
+Format may either 'json' or 'bind' to provide resource records in either format. The default
+output format is JSON.
+
+Example Output (JSON format):
+```
+wget -O - -q http://localhost:8042/api/dns/root-zone?format=json | jq
+```
+
+```
+{
+  "Records": [
+    {
+      "Name": "dn42",
+      "Type": "NS",
+      "Content": "b.delegation-servers.dn42.",
+      "Comment": "DN42 Authoritative Zone"
+    },
+    {
+      "Name": "dn42",
+      "Type": "NS",
+      "Content": "j.delegation-servers.dn42.",
+      "Comment": "DN42 Authoritative Zone"
+    },
+
+... and so on
+```
+
+Example Output (BIND format):
+```
+wget -O - -q http://localhost:8042/api/dns/root-zone?format=bind
+```
+
+```
+;; DN42 Root Zone Records
+;; Commit Reference: 2cc95d9101268ce82239dee1f947e4a8273524a9
+;; Generated: 2019-03-08 19:40:51.264803795 +0000 GMT m=+0.197704585
+dn42    IN      NS      b.delegation-servers.dn42.      ; DN42 Authoritative Zone
+dn42    IN      NS      j.delegation-servers.dn42.      ; DN42 Authoritative Zone
+dn42    IN      NS      y.delegation-servers.dn42.      ; DN42 Authoritative Zone
+dn42    IN      DS      64441 10 2 6dadda00f5986bd26fe4f162669742cf7eba07d212b525acac9840ee06cb2799   ; DN42 Authoritative Zone
+dn42    IN      DS      56676 10 2 4b559c949eb796f5502f05bd5bb2143672e7ef935286db552955f291bb81093e   ; DN42 Authoritative Zone
+d.f.ip6.arpa    IN      NS      b.delegation-servers.dn42.      ; DN42 Authoritative Zone
+d.f.ip6.arpa    IN      NS      j.delegation-servers.dn42.      ; DN42 Authoritative Zone
+d.f.ip6.arpa    IN      NS      y.delegation-servers.dn42.      ; DN42 Authoritative Zone
+d.f.ip6.arpa    IN      DS      64441 10 2 9057500a3b6e09bf45a60ed8891f2e649c6812d5d149c45a3c560fa0a619
+5c49    ; DN42 Authoritative Zone
+d.f.ip6.arpa    IN      DS      56676 10 2 d93cfd941025aaa445283d33e27157bb9a2df0a9c1389fdf5e36a377fc31
+4736    ; DN42 Authoritative Zone
+
+... and so on
+```
