@@ -15,8 +15,8 @@
 # This array is used to define additional, local networks that the
 # DNS server may be authoritative for. The array is used to prevent
 # the related resource records from being removed automatically,
-# as any records not listed here or in the registry will get deleted
-# make sure to include '.' here or the local NS and SOA records
+# as any records not listed here or in the registry will get deleted.
+# Make sure to include '.' here or the local NS and SOA records
 # will get removed
 
 IGNORE_RECORDS=(
@@ -42,7 +42,7 @@ function replace_rr {
     local rr_type=$1; shift
     local rr_content=$*
 
-    >&2 echo "Replace: ${rr_name} ${rr_type} '${rr_content}'"
+    echo "Replace: ${rr_name} ${rr_type} '${rr_content}'"
     
     if [ ${DEBUG} -eq 0 ]
     then
@@ -56,7 +56,7 @@ function delete_rr {
     local rr_name=$1
     local rr_type=$2
 
-    >&2 echo "Delete: ${rr_name} ${rr_type}"
+    echo "Delete: ${rr_name} ${rr_type}"
 
     if [ ${DEBUG} -eq 0 ]
     then
@@ -80,7 +80,7 @@ function get_current_root_zone {
 
 # update the . SOA record after a change
 function update_soa {
-    >&2 echo "Incrementing SOA serial"
+    echo "Incrementing SOA serial"
     if [ ${DEBUG} -eq 0 ]
     then
         ${PDNSUTIL} increase-serial .
@@ -89,7 +89,7 @@ function update_soa {
 
 # used to trigger a notify to any slaves of this server
 function notify_slaves {
-    >&2 echo "Notfying slaves"    
+    echo "Notfying slaves"    
     if [ ${DEBUG} -eq 0 ]
     then    
         ${PDNSCTRL} notify .
@@ -137,6 +137,8 @@ declare -A current_rz
 declare -A new_rz
 current_commit=''
 new_commit=''
+deleted_records=0
+updated_records=0
 
 ##########################################################################
 # fetch and parse the root zone data from the API
@@ -163,7 +165,7 @@ function fetch_new_root_zone {
         fi
     done < <(/usr/bin/wget -O - -q "${APIURL}/dns/root-zone?format=bind")
 
-    if [ ${DEBUG} -eq 1 ]; then >&2 echo "New Commit: ${new_commit}"; fi
+    if [ ${DEBUG} -eq 1 ]; then echo "New Commit: ${new_commit}"; fi
 }
 
 ##########################################################################
@@ -171,7 +173,7 @@ function fetch_new_root_zone {
 
 function load_current_commit {
     read -r current_commit < "${COMMITFILE}" 
-    if [ ${DEBUG} -eq 1 ]; then >&2 echo "Current Commit: ${current_commit}"; fi
+    if [ ${DEBUG} -eq 1 ]; then echo "Current Commit: ${current_commit}"; fi
 }
 
 function store_current_commit {
@@ -194,7 +196,8 @@ function is_ignored {
 }
 
 function remove_deleted_records {
-    local key rr_name ignored count=0
+    local key rr_name ignored
+    deleted_records=0
 
     # check each record in the old root zone
     for key in "${!current_rz[@]}"
@@ -206,35 +209,36 @@ function remove_deleted_records {
         then
             # then get rid of it
             delete_rr ${key}
-            count=$((count + 1))
+            deleted_records=$((deleted_records + 1))
         fi
     done
 
-    echo ${count}
+    echo "Deleted ${deleted_records} records"
 }
 
 ##########################################################################
 # update records that have been added or changed
 
 function update_new_records {
-    local key content count=0
+    local key content
+    updated_records=0
 
     # check each new record
     for key in "${!new_rz[@]}"
     do
-	content="${new_rz[${key}]}"
+	      content="${new_rz[${key}]}"
 	
         # if old record didn't exist, or content differs
         if [ "${current_rz[${key}]}" != "${content}" ]
         then
             # update the record
             replace_rr $key ${content}
-            count=$((count + 1))            
+            updated_records=$((updated_records + 1))
         fi
         
     done
 
-    echo ${count}
+    echo "Updated ${updated_records} records"    
 }
 
 ##########################################################################
@@ -265,21 +269,20 @@ fi
 get_current_root_zone
 
 # apply changes
-deleted_records=$(remove_deleted_records)
-echo "Deleted ${deleted_records} records"
-updated_records=$(update_new_records)
-echo "Updated ${updated_records} records"
+remove_deleted_records
+update_new_records
 
 # bail out if there were no actual differences
 if [ $((deleted_records + updated_records)) -eq 0 ]
 then
     echo "No records were updated, exiting"
-    exit 0
-fi
+else
 
-# update the SOA and send out a notification to slaves
-update_soa
-notify_slaves
+    # update the SOA and send out a notification to slaves
+    update_soa
+    notify_slaves
+
+fi
 
 # finally store the new commit to show it's been updated
 store_current_commit "${new_commit}"
