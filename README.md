@@ -6,7 +6,7 @@ interactive applications and registry data.
 A public instance of the API and explorer web app can be accessed via:
 
 * [https://explorer.burble.com/](https://explorer.burble.com/) (Internet link)
-* [http://collector.dn42:8042/](http://collector.dn42:8042/) (DN42 Link)
+* [http://explorer.collector.dn42/](http://explorer.collector.dn42/) (DN42 Link)
 
 ## Features
 
