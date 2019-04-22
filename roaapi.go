@@ -361,6 +361,7 @@ func (roa *ROA) CompileROA(registry *Registry,
 			continue
 		}
 
+		// don't allow routes that are denied in the filter rules
 		if filter.Action == "deny" {
 			log.WithFields(log.Fields{
 				"object": object.Ref,
@@ -370,9 +371,20 @@ func (roa *ROA) CompileROA(registry *Registry,
 			continue
 		}
 
-		// calculate the max-length for this object
-
 		mlen := filter.MaxLen
+
+		// if the prefix is greater than the filter.MaxLen
+		// then don't emit an ROA route (making the route invalid)
+		if ones, _ := pnet.Mask.Size(); ones > int(mlen) {
+			log.WithFields(log.Fields{
+				"object": object.Ref,
+				"prefix": prefix,
+				"filter": filter.Prefix,
+			}).Debug("Defined ROA: Prefix > filter MaxLen")
+			continue
+		}
+
+		// calculate the max-length for this object
 
 		// check if the attribute has max-length defined
 		mattrib := mlenIX.Objects[object]
