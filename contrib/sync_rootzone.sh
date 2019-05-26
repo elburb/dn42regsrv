@@ -27,6 +27,7 @@ IGNORE_RECORDS=(
     'collector.dn42'
     '1.0.6.2.2.4.2.4.2.4.d.f.ip6.arpa'
     '160/27.129.20.172.in-addr.arpa'
+    '0/27.129.20.172.in-addr.arpa'
 )
 
 ##########################################################################
@@ -112,7 +113,7 @@ function usage {
 
 # default options
 DEBUG=0
-APIURL="http://grc.burble.dn42:8043/api"
+APIURL="http://explorer.collector.dn42/api"
 COMMITFILE="/tmp/.sync_rz_commit"
 
 # parse any arguments passed to the script
