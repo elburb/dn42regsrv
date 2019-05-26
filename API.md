@@ -383,6 +383,23 @@ wget -O - -q http://localhost:8042/api/registry/aut-num/*/*-c/*burble?raw | jq
 }
 ```
 
+A special query exists to return metadata about the registry
+
+```
+GET /api/registry/.meta
+```
+
+Example Output (JSON format):
+```
+wget -O - -q http://localhost:8042/api/dns/.meta | jq
+```
+
+```
+{
+  "Commit": "fa89d022d0c2a48bcfbee405e2f3685f3b9cf063"
+}
+```
+
 ## DNS Root Zone API
 
 The DNS API provides a list of resource records that can be used to create a root zone for DN42

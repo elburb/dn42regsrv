@@ -16,6 +16,13 @@ import (
 )
 
 //////////////////////////////////////////////////////////////////////////
+// data structures
+
+type RegMetaReturn struct {
+	Commit string
+}
+
+//////////////////////////////////////////////////////////////////////////
 // register the api
 
 func init() {
@@ -38,12 +45,25 @@ func InitRegistryAPI(params ...interface{}) {
 	//s.HandleFunc("/.schema", rTypeListHandler)
 	//s.HandleFunc("/.meta/", rTypeListHandler)
 
+	s.HandleFunc("/.meta", regMetaHandler)
 	s.HandleFunc("/{type}", regTypeHandler)
 	s.HandleFunc("/{type}/{object}", regObjectHandler)
 	s.HandleFunc("/{type}/{object}/{key}", regKeyHandler)
 	s.HandleFunc("/{type}/{object}/{key}/{attribute}", regAttributeHandler)
 
 	log.Info("Registry API installed")
+}
+
+//////////////////////////////////////////////////////////////////////////
+// return registry metadata
+
+func regMetaHandler(w http.ResponseWriter, r *http.Request) {
+
+	rv := RegMetaReturn{
+		Commit: RegistryData.Commit,
+	}
+
+	ResponseJSON(w, rv)
 }
 
 //////////////////////////////////////////////////////////////////////////
