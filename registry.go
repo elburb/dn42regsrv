@@ -600,30 +600,43 @@ func getCommitHash(regDir string, gitPath string) string {
 //////////////////////////////////////////////////////////////////////////
 // refresh the registry
 
-func refreshRegistry(regDir string, gitPath string, pullURL string) {
+func refreshRegistry(regDir string, gitPath string, branch string) {
 
-	// run git to get the latest commit hash
-	cmd := exec.Command(gitPath, "pull", pullURL)
+	// run git fetch to get the current commits from the master
+	cmd := exec.Command(gitPath, "fetch")
 	cmd.Dir = regDir
 	// execute
-	out, err := cmd.Output()
-	if err != nil {
+	if out, err := cmd.Output(); err != nil {
 		log.WithFields(log.Fields{
 			"error":   err,
 			"gitPath": gitPath,
 			"regDir":  regDir,
-			"pullURL": pullURL,
-		}).Error("Failed to execute git log")
+		}).Error("Failed to execute git fetch")
+	} else {
+		fmt.Printf("Git Fetch: %s", string(out))
 	}
 
-	fmt.Println(string(out))
+	// then reset hard to match the master
+	cmd = exec.Command(gitPath, "reset", "--hard", "origin/"+branch)
+	cmd.Dir = regDir
+	// execute
+	if out, err := cmd.Output(); err != nil {
+		log.WithFields(log.Fields{
+			"error":   err,
+			"gitPath": gitPath,
+			"regDir":  regDir,
+			"branch":  branch,
+		}).Error("Failed to execute git reset")
+	} else {
+		fmt.Printf("Git Reset: %s", string(out))
+	}
 }
 
 //////////////////////////////////////////////////////////////////////////
 // called from main to initialse the registry data and syncing
 
 func InitialiseRegistryData(regDir string, refresh time.Duration,
-	gitPath string, autoPull bool, pullURL string) {
+	gitPath string, autoPull bool, branch string) {
 
 	// validate that the regDir/data path exists
 	dataPath := regDir + "/data"
@@ -675,7 +688,7 @@ func InitialiseRegistryData(regDir string, refresh time.Duration,
 
 			// automatically try to refresh the registry ?
 			if autoPull {
-				refreshRegistry(regDir, gitPath, pullURL)
+				refreshRegistry(regDir, gitPath, branch)
 			}
 
 			// get the latest hash
