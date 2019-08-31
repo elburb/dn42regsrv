@@ -21,13 +21,25 @@ A public instance of the API and explorer web app can be accessed via:
 
 ## Building
 
-Requires [git](https://git-scm.com/) and [go](https://golang.org)
+#### Using locally installed go
 
+Requires [git](https://git-scm.com/) and [go](https://golang.org)  
 ```
 go get -insecure git.dn42.us/burble/dn42regsrv
 ```
 
+#### Without installing go
+
+Using container runtime to build with the golang container:  
+```
+docker run -v ${PWD}:/go/bin golang go get -insecure git.dn42.us/burble/dn42regsrv
+```
+
+Or use the *contrib/build.sh* script after cloning the repo.
+
 ## Running
+
+#### As a service
 
 Use --help to view configurable options
 ```
@@ -46,6 +58,14 @@ ${GOPATH}/dn42regsrv
 ```
 
 A sample service file is included for running the server under systemd
+
+#### Within a container
+
+A container build script (*contrib/buildah.sh*) is included in the
+contrib directory. The script uses [buildah](https://buildah.io/).
+
+See the *contrib/entrypoint.sh* script for environment variables that can
+be set when running the container.
 
 ## Using
 
