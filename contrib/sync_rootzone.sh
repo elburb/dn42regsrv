@@ -113,7 +113,7 @@ function usage {
 
 # default options
 DEBUG=0
-APIURL="http://explorer.collector.dn42/api"
+APIURL="http://explorer.burble.dn42/api"
 COMMITFILE="/tmp/.sync_rz_commit"
 
 # parse any arguments passed to the script
