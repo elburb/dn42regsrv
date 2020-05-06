@@ -39,12 +39,13 @@ type PrefixROA struct {
 }
 
 type ROAFilter struct {
-	Number  uint
-	Action  string
-	Prefix  string
-	MinLen  uint8
-	MaxLen  uint8
-	Network *net.IPNet
+	Number  uint       `json:"nr"`
+	Action  string     `json:"action"`
+	Prefix  string     `json:"prefix"`
+	MinLen  uint8      `json:"minlen"`
+	MaxLen  uint8      `json:"maxlen"`
+	Network *net.IPNet `json:"-"`
+	IPType  uint8      `json:"-"`
 }
 
 type ROA struct {
@@ -90,6 +91,7 @@ func InitROAAPI(params ...interface{}) {
 		PathPrefix("/roa").
 		Subrouter()
 
+	s.HandleFunc("/filter/{ipv}", roaFilterHandler)
 	s.HandleFunc("/json", roaJSONHandler)
 	s.HandleFunc("/bird/{birdv}/{ipv}", roaBirdHandler)
 
@@ -98,6 +100,38 @@ func InitROAAPI(params ...interface{}) {
 
 //////////////////////////////////////////////////////////////////////////
 // api handlers
+
+// return JSON formatted version of filter{,6}.txt
+func roaFilterHandler(w http.ResponseWriter, r *http.Request) {
+
+	vars := mux.Vars(r)
+	ipv := vars["ipv"]
+
+	// pre-create an array to hold the result
+	filters := make([]*ROAFilter, 0, len(ROAData.Filters))
+
+	// helper closure to select from the filter array
+	fselect := func(a []*ROAFilter, t uint8) []*ROAFilter {
+		for _, f := range ROAData.Filters {
+			if f.IPType == t {
+				a = append(a, f)
+			}
+		}
+		return a
+	}
+
+	// add ipv4 filters if required
+	if strings.ContainsRune(ipv, '4') {
+		filters = fselect(filters, 4)
+	}
+
+	// add ipv6 filters if required
+	if strings.ContainsRune(ipv, '6') {
+		filters = fselect(filters, 6)
+	}
+
+	ResponseJSON(w, filters)
+}
 
 // return JSON formatted ROA data suitable for use with GoRTR
 func roaJSONHandler(w http.ResponseWriter, r *http.Request) {
@@ -164,12 +198,12 @@ func ROAUpdate(params ...interface{}) {
 	}
 
 	// load filter{,6}.txt files
-	if roa.loadFilter(path+"/filter.txt") != nil {
+	if roa.loadFilter(path+"/filter.txt", 4) != nil {
 		// error loading IPv4 filter, don't update
 		return
 	}
 
-	if roa.loadFilter(path+"/filter6.txt") != nil {
+	if roa.loadFilter(path+"/filter6.txt", 6) != nil {
 		// error loading IPv6 filter, don't update
 		return
 	}
@@ -206,7 +240,7 @@ func ROAUpdate(params ...interface{}) {
 //////////////////////////////////////////////////////////////////////////
 // load network filter definitions from a filter file
 
-func (roa *ROA) loadFilter(path string) error {
+func (roa *ROA) loadFilter(path string, iptype uint8) error {
 
 	// open the file for reading
 	file, err := os.Open(path)
@@ -272,6 +306,7 @@ func (roa *ROA) loadFilter(path string) error {
 					MinLen:  uint8(convert(fields[3])),
 					MaxLen:  uint8(convert(fields[4])),
 					Network: network,
+					IPType:  iptype,
 				}
 
 				// add to list if no strconv error
@@ -291,11 +326,10 @@ func (roa *ROA) loadFilter(path string) error {
 		return err
 	}
 
-	// sort the filters based on prefix length (largest first)
+	// filter.txt should be in order,
+	// but still sort by number just in case
 	sort.Slice(filters, func(i, j int) bool {
-		leni, _ := filters[i].Network.Mask.Size()
-		lenj, _ := filters[j].Network.Mask.Size()
-		return leni > lenj
+		return filters[i].Number < filters[j].Number
 	})
 
 	// add to the roa object
