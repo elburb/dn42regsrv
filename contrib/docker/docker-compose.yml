@@ -1,0 +1,9 @@
+version: '2'
+services:
+  dn42regsrv:
+    image: dn42regsrv
+    restart: always
+    ports:
+      - 127.0.0.1:8042:8042
+    volumes:
+      - ${REGISTRYDIR}:/app/registry
