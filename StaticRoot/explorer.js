@@ -57,11 +57,29 @@ Vue.component('reg-attribute', {
             return reg[2]
         },
         decorated: function() {
-            return anchorme(this.content.replace(/\n/g, "<br/>"), {
+            var c = this.content
+
+            // an attribute terminated with \n indicates a blank
+            // trailing line, however a single trailing <br/> will
+            // not be rendered in HTML, this hack doubles up the
+            // trailing newline so it creates a <br/> pair
+            // which renders as the blank line
+            if (c.substr(c.length-1) == "\n") {
+                c = c + "\n"
+            }
+
+            // replace newlines with line breaks
+            c = c.replace(/\n/g, "<br/>")
+
+            // decorate
+            c = anchorme(c, {
                 truncate: 40,
                 ips: false,
-                attributes: [ { name: "target", value: "_blank" } ]                
+                attributes: [ { name: "target", value: "_blank" } ]
             })
+
+            // and return the final decorated content
+            return c
         }
     }
 })
