@@ -1,0 +1,21 @@
+---
+kind: pipeline
+type: exec
+name: default
+
+steps:
+ - name: build
+   environment:
+     CGO_ENABLED: 0
+   commands:
+    - go build
+
+ - name: stage
+   commands:
+    - stage_artifact.sh dn42regsrv dn42regsrv StaticRoot
+
+ - name: promote
+   commands:
+    - promote_artifact.sh dn42regsrv
+   when:
+    branch: master
