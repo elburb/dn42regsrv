@@ -379,7 +379,7 @@ func (roa *ROA) CompileROA(registry *Registry,
 
 		// extract the prefix
 		prefix := rattribs[0].RawValue
-		_, pnet, err := net.ParseCIDR(prefix)
+		prefIP, prefNet, err := net.ParseCIDR(prefix)
 		if err != nil {
 			log.WithFields(log.Fields{
 				"object": object.Ref,
@@ -389,8 +389,16 @@ func (roa *ROA) CompileROA(registry *Registry,
 			continue
 		}
 
+		// check for CIDR errors
+		if !prefIP.Equal(prefNet.IP) {
+			log.WithFields(log.Fields{
+				"prefix": prefix,
+			}).Warn("Denied ROA: invalid CIDR")
+			continue
+		}
+
 		// match the prefix to the prefix filters
-		filter := roa.MatchFilter(pnet.IP)
+		filter := roa.MatchFilter(prefNet.IP)
 		if filter == nil {
 			continue
 		}
@@ -401,22 +409,12 @@ func (roa *ROA) CompileROA(registry *Registry,
 				"object": object.Ref,
 				"prefix": prefix,
 				"filter": filter.Prefix,
-			}).Warn("Denied ROA through filter rule")
+			}).Warn("Denied ROA: through filter rule")
 			continue
 		}
 
 		mlen := filter.MaxLen
-
-		// if the prefix is greater than the filter.MaxLen
-		// then don't emit an ROA route (making the route invalid)
-		if ones, _ := pnet.Mask.Size(); ones > int(mlen) {
-			log.WithFields(log.Fields{
-				"object": object.Ref,
-				"prefix": prefix,
-				"filter": filter.Prefix,
-			}).Debug("Defined ROA: Prefix > filter MaxLen")
-			continue
-		}
+		prefLen, _ := prefNet.Mask.Size()
 
 		// calculate the max-length for this object
 
@@ -442,6 +440,17 @@ func (roa *ROA) CompileROA(registry *Registry,
 			}
 		}
 
+		// if the prefix is greater than the max length
+		// then don't emit an ROA route (making the route invalid)
+		if prefLen > int(mlen) {
+			log.WithFields(log.Fields{
+				"object": object.Ref,
+				"prefix": prefix,
+				"maxlen": mlen,
+			}).Warn("Denied ROA: Prefix > filter MaxLen")
+			continue
+		}
+
 		// look up the origin key for this object
 		oattribs := originIX.Objects[object]
 		if oattribs == nil {
@@ -455,7 +464,7 @@ func (roa *ROA) CompileROA(registry *Registry,
 
 				// add the ROA
 				roalist = append(roalist, &PrefixROA{
-					Prefix: prefix,
+					Prefix: prefNet.String(),
 					MaxLen: mlen,
 					ASN:    oattrib.RawValue,
 				})
