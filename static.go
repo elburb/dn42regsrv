@@ -42,13 +42,25 @@ func InstallStaticRoutes(router *mux.Router, staticPath string) {
 	}
 
 	// install a file server for the static route
-	router.PathPrefix("/").Handler(http.StripPrefix("/",
-		http.FileServer(http.Dir(staticPath)))).Methods("GET")
+	router.PathPrefix("/").Handler(staticHandler(staticPath))
 
 	log.WithFields(log.Fields{
 		"path": staticPath,
 	}).Info("Static route installed")
 
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+func staticHandler(path string) http.Handler {
+
+	server := http.FileServer(http.Dir(path))
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// allow up to a month of caching
+		w.Header().Set("Cache-Control", "public, max-age=2592000, stale-if-error=86400")
+		server.ServeHTTP(w, r)
+	})
 }
 
 //////////////////////////////////////////////////////////////////////////

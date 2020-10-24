@@ -9,6 +9,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 	flag "github.com/spf13/pflag"
@@ -143,8 +144,9 @@ func main() {
 
 	// initialise router
 	router := mux.NewRouter()
-	// log all access
+	// global handers, log all requests and allow compression
 	router.Use(requestLogger)
+	router.Use(handlers.CompressHandler)
 
 	// add API routes
 	subr := router.PathPrefix("/api").Subrouter()

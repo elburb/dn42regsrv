@@ -63,6 +63,8 @@ func regMetaHandler(w http.ResponseWriter, r *http.Request) {
 		Commit: RegistryData.Commit,
 	}
 
+	// don't cache
+	w.Header().Set("Cache-Control", "no-store")
 	ResponseJSON(w, rv)
 }
 
@@ -311,6 +313,11 @@ func regRootHandler(w http.ResponseWriter, r *http.Request) {
 	for _, rType := range RegistryData.Types {
 		response[rType.Ref] = len(rType.Objects)
 	}
+
+	// cache for up to a day, but set etag to commit to catch changes
+	w.Header().Set("Cache-Control", "public, max-age=86400, stale-if-error=86400")
+	w.Header().Set("ETag", RegistryData.Commit)
+
 	ResponseJSON(w, response)
 
 }
@@ -343,6 +350,10 @@ func regTypeHandler(w http.ResponseWriter, r *http.Request) {
 
 		response[rtype.Ref] = objects
 	}
+
+	// cache for up to a day, but set etag to commit to catch changes
+	w.Header().Set("Cache-Control", "public, max-age=86400, stale-if-error=86400")
+	w.Header().Set("ETag", RegistryData.Commit)
 
 	ResponseJSON(w, response)
 }
@@ -409,6 +420,10 @@ func regObjectHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
+		// cache for up to a day, but set etag to commit to catch changes
+		w.Header().Set("Cache-Control", "public, max-age=86400, stale-if-error=86400")
+		w.Header().Set("ETag", RegistryData.Commit)
+
 		ResponseJSON(w, response)
 
 	} else {
@@ -426,6 +441,10 @@ func regObjectHandler(w http.ResponseWriter, r *http.Request) {
 				attributes[ix] = [2]string{attribute.Key, attribute.RawValue}
 			}
 		}
+
+		// cache for up to a day, but set etag to commit to catch changes
+		w.Header().Set("Cache-Control", "public, max-age=86400, stale-if-error=86400")
+		w.Header().Set("ETag", RegistryData.Commit)
 
 		ResponseJSON(w, response)
 	}
@@ -478,6 +497,10 @@ func regKeyHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// cache for up to a day, but set etag to commit to catch changes
+	w.Header().Set("Cache-Control", "public, max-age=86400, stale-if-error=86400")
+	w.Header().Set("ETag", RegistryData.Commit)
+
 	ResponseJSON(w, amap)
 }
 
@@ -527,6 +550,10 @@ func regAttributeHandler(w http.ResponseWriter, r *http.Request) {
 			oFilter+"/"+kFilter+"/"+aFilter+"' found", http.StatusNotFound)
 		return
 	}
+
+	// cache for up to a day, but set etag to commit to catch changes
+	w.Header().Set("Cache-Control", "public, max-age=86400, stale-if-error=86400")
+	w.Header().Set("ETag", RegistryData.Commit)
 
 	ResponseJSON(w, amap)
 
