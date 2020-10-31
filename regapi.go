@@ -315,7 +315,7 @@ func regRootHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// cache for up to a day, but set etag to commit to catch changes
-	w.Header().Set("Cache-Control", "public, max-age=86400, stale-if-error=86400")
+	w.Header().Set("Cache-Control", "public, max-age=7200, stale-if-error=86400")
 	w.Header().Set("ETag", RegistryData.Commit)
 
 	ResponseJSON(w, response)
@@ -352,7 +352,7 @@ func regTypeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// cache for up to a day, but set etag to commit to catch changes
-	w.Header().Set("Cache-Control", "public, max-age=86400, stale-if-error=86400")
+	w.Header().Set("Cache-Control", "public, max-age=7200, stale-if-error=86400")
 	w.Header().Set("ETag", RegistryData.Commit)
 
 	ResponseJSON(w, response)
@@ -421,7 +421,7 @@ func regObjectHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// cache for up to a day, but set etag to commit to catch changes
-		w.Header().Set("Cache-Control", "public, max-age=86400, stale-if-error=86400")
+		w.Header().Set("Cache-Control", "public, max-age=7200, stale-if-error=86400")
 		w.Header().Set("ETag", RegistryData.Commit)
 
 		ResponseJSON(w, response)
@@ -443,7 +443,7 @@ func regObjectHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// cache for up to a day, but set etag to commit to catch changes
-		w.Header().Set("Cache-Control", "public, max-age=86400, stale-if-error=86400")
+		w.Header().Set("Cache-Control", "public, max-age=7200 stale-if-error=86400")
 		w.Header().Set("ETag", RegistryData.Commit)
 
 		ResponseJSON(w, response)
@@ -498,7 +498,7 @@ func regKeyHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// cache for up to a day, but set etag to commit to catch changes
-	w.Header().Set("Cache-Control", "public, max-age=86400, stale-if-error=86400")
+	w.Header().Set("Cache-Control", "public, max-age=7200, stale-if-error=86400")
 	w.Header().Set("ETag", RegistryData.Commit)
 
 	ResponseJSON(w, amap)
@@ -552,7 +552,7 @@ func regAttributeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// cache for up to a day, but set etag to commit to catch changes
-	w.Header().Set("Cache-Control", "public, max-age=86400, stale-if-error=86400")
+	w.Header().Set("Cache-Control", "public, max-age=7200, stale-if-error=86400")
 	w.Header().Set("ETag", RegistryData.Commit)
 
 	ResponseJSON(w, amap)

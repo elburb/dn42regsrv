@@ -58,7 +58,7 @@ func staticHandler(path string) http.Handler {
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// allow up to a month of caching
-		w.Header().Set("Cache-Control", "public, max-age=2592000, stale-if-error=86400")
+		w.Header().Set("Cache-Control", "public, max-age=2592000, stale-if-error=2592000")
 		server.ServeHTTP(w, r)
 	})
 }

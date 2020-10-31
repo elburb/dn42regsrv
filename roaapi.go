@@ -131,7 +131,7 @@ func roaFilterHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// cache for up to a week, but set etag to commit to catch changes
-	w.Header().Set("Cache-Control", "public, max-age=604800, stale-if-error=86400")
+	w.Header().Set("Cache-Control", "public, max-age=7200, stale-if-error=604800")
 	w.Header().Set("ETag", ROAData.Commit)
 
 	ResponseJSON(w, filters)
@@ -152,7 +152,7 @@ func roaJSONHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// cache for up to a week, but set etag to commit to catch changes
-	w.Header().Set("Cache-Control", "public, max-age=604800, stale-if-error=86400")
+	w.Header().Set("Cache-Control", "public, max-age=7200, stale-if-error=604800")
 	w.Header().Set("ETag", ROAData.Commit)
 
 	ResponseJSON(w, ROAJSONResponse)
@@ -183,7 +183,7 @@ func roaBirdHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
 	// cache for up to a week, but set etag to commit to catch changes
-	w.Header().Set("Cache-Control", "public, max-age=604800, stale-if-error=86400")
+	w.Header().Set("Cache-Control", "public, max-age=7200, stale-if-error=604800")
 	w.Header().Set("ETag", ROAData.Commit)
 
 	fmt.Fprintf(w, "#\n# dn42regsrv ROA Generator\n# Last Updated: %s\n"+

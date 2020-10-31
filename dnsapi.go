@@ -90,7 +90,7 @@ func dnsRZoneHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// cache for up to a day
-	w.Header().Set("Cache-Control", "public, max-age=86400, stale-if-error=86400")
+	w.Header().Set("Cache-Control", "public, max-age=7200, stale-if-error=86400")
 
 	switch format[0] {
 	case "bind":
