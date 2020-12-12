@@ -296,6 +296,20 @@ wget -O - -q http://localhost:8042/api/dns/.meta | jq
 }
 ```
 
+It is also possible to force a refresh of the registry data.  
+To limit abuse, the refresh endpoint is protected by a secret token that must be passed using the `Authorization` header.
+
+```
+POST /api/registry/.meta/refresh
+```
+
+Example :
+```
+wget -O - -q --header='Authorization: secret' --post-data='' http://localhost:8042/api/registry/.meta/refresh
+```
+
+The token is set using the `--AuthToken` command line parameter.
+
 ## Route Origin Authorisation (ROA) API
 
 Route Origin Authorisation (ROA) data can be obtained from the server in

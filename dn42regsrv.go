@@ -124,6 +124,7 @@ func main() {
 		gitPath         = flag.StringP("GitPath", "g", "/usr/bin/git", "Path to git executable")
 		autoPull        = flag.BoolP("AutoPull", "a", true, "Automatically pull the registry")
 		branch          = flag.StringP("Branch", "p", "master", "git branch to pull")
+		authToken       = flag.StringP("AuthToken", "t", "secret", "Auth token for refresh endpoint")
 	)
 	flag.Parse()
 
@@ -140,7 +141,7 @@ func main() {
 	}
 
 	InitialiseRegistryData(*regDir, interval,
-		*gitPath, *autoPull, *branch)
+		*gitPath, *autoPull, *branch, *authToken)
 
 	// initialise router
 	router := mux.NewRouter()

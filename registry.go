@@ -71,8 +71,12 @@ type Registry struct {
 // and a variable for the actual data
 var RegistryData *Registry
 
-// store the current commit has
+// store the previous commit
 var previousCommit string
+
+// also store the registry refresh ticker
+var AuthorisationToken string
+var RegistryRefresh chan bool
 
 //////////////////////////////////////////////////////////////////////////
 // utility and manipulation functions
@@ -636,7 +640,9 @@ func refreshRegistry(regDir string, gitPath string, branch string) {
 // called from main to initialse the registry data and syncing
 
 func InitialiseRegistryData(regDir string, refresh time.Duration,
-	gitPath string, autoPull bool, branch string) {
+	gitPath string, autoPull bool, branch string, token string) {
+
+	AuthorisationToken = token
 
 	// validate that the regDir/data path exists
 	dataPath := regDir + "/data"
@@ -680,10 +686,20 @@ func InitialiseRegistryData(regDir string, refresh time.Duration,
 	previousCommit = getCommitHash(regDir, gitPath)
 	reloadRegistry(dataPath, previousCommit)
 
+	// create the refresh timer
+	RegistryRefresh = make(chan bool)
+	ticker := time.NewTicker(refresh)
+
 	go func() {
 
-		// every refresh interval
-		for range time.Tick(refresh) {
+		for {
+
+			select {
+			// when the ticker ticks
+			case <-RegistryRefresh:
+			case <-ticker.C:
+			}
+
 			log.Debug("Refresh Timer")
 
 			// automatically try to refresh the registry ?

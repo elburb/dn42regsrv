@@ -51,6 +51,10 @@ func InitRegistryAPI(params ...interface{}) {
 	s.HandleFunc("/{type}/{object}/{key}", regKeyHandler)
 	s.HandleFunc("/{type}/{object}/{key}/{attribute}", regAttributeHandler)
 
+	// add PUSH method to refresh registry
+	router.HandleFunc("/registry/.meta/refresh", regRefreshHandler).
+		Methods("POST")
+
 	log.Info("Registry API installed")
 }
 
@@ -66,6 +70,28 @@ func regMetaHandler(w http.ResponseWriter, r *http.Request) {
 	// don't cache
 	w.Header().Set("Cache-Control", "no-store")
 	ResponseJSON(w, rv)
+}
+
+//////////////////////////////////////////////////////////////////////////
+// force a registry refresh
+
+func regRefreshHandler(w http.ResponseWriter, r *http.Request) {
+
+	token := r.Header.Get("Authorization")
+	if token == AuthorisationToken {
+
+		// trigger a refresh
+		RegistryRefresh <- true
+
+		// all good
+		response := struct{ status string }{"ok"}
+		ResponseJSON(w, response)
+
+	} else {
+
+		w.WriteHeader(http.StatusForbidden)
+		w.Write([]byte("403 - Forbidden"))
+	}
 }
 
 //////////////////////////////////////////////////////////////////////////
