@@ -94,6 +94,7 @@ func InitROAAPI(params ...interface{}) {
 	s.HandleFunc("/filter/{ipv}", roaFilterHandler)
 	s.HandleFunc("/json", roaJSONHandler)
 	s.HandleFunc("/bird/{birdv}/{ipv}", roaBirdHandler)
+	s.HandleFunc("/obgpd/{ipv}", roaOBGPdHandler)
 
 	log.Info("ROA API installed")
 }
@@ -192,6 +193,43 @@ func roaBirdHandler(w http.ResponseWriter, r *http.Request) {
 	for _, r := range roa {
 		fmt.Fprintf(w, birdf, r.Prefix, r.MaxLen, r.ASN[2:])
 	}
+
+}
+
+// return the roa in OpenBGPd format
+func roaOBGPdHandler(w http.ResponseWriter, r *http.Request) {
+
+	vars := mux.Vars(r)
+	ipv := vars["ipv"]
+
+	// select ROA to emit
+	var roa []*PrefixROA
+	if strings.ContainsRune(ipv, '4') {
+		roa = append(roa, ROAData.IPv4...)
+	}
+	if strings.ContainsRune(ipv, '6') {
+		roa = append(roa, ROAData.IPv6...)
+	}
+
+	w.Header().Set("Content-Type", "text/plain")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	// cache for up to a week, but set etag to commit to catch changes
+	w.Header().Set("Cache-Control", "public, max-age=7200, stale-if-error=604800")
+	w.Header().Set("ETag", ROAData.Commit)
+
+	// add header
+	fmt.Fprintf(w, "#\n# dn42regsrv ROA Generator\n# Last Updated: %s\n"+
+		"# Commit: %s\n#\nroa-set {\n", ROAData.CTime.String(), ROAData.Commit)
+
+	// output the ROA
+	format := "  %s maxlen %d source-as %s\n"
+	for _, r := range roa {
+		fmt.Fprintf(w, format, r.Prefix, r.MaxLen, r.ASN[2:])
+	}
+
+	// add tail
+	fmt.Fprintf(w, "}\n")
 
 }
 

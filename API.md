@@ -313,7 +313,7 @@ The token is set using the `--AuthToken` command line parameter.
 ## Route Origin Authorisation (ROA) API
 
 Route Origin Authorisation (ROA) data can be obtained from the server in
-JSON and bird formats.
+JSON, bird and OpenBGPd formats.
 
 ### JSON format output
 
@@ -412,6 +412,69 @@ route fd42:1a2b:de57::/48 max 64 as 4242422454;
 route fd42:7879:7879::/48 max 64 as 4242421787;
 
 ... and so on
+```
+
+### OpenBGPd format output
+
+```
+GET /api/roa/obgpd/{IP family}
+```
+
+Provides ROA data suitable for including in to OpenBGPd.
+
+{IP family} can be 4, 6 or 46 to provide both IPv4 and IPv6 results
+
+
+Example Output:
+```
+wget -O - -q http://localhost:8042/api/roa/obgpd/4
+```
+
+```
+#
+# dn42regsrv ROA Generator
+# Last Updated: 2021-05-19 12:54:44.441996393 +0100 BST m=+5.976816481
+# Commit: 8b96b02aa4c2f02b3a3e64c8458bc76596b6345c
+#
+roa-set {
+  172.20.34.0/26 maxlen 29 source-as 4242423966
+  172.20.58.0/27 maxlen 29 source-as 4242420237
+  10.132.0.0/16 maxlen 24 source-as 65132
+
+...
+
+  172.23.222.160/28 maxlen 29 source-as 4242423626
+  172.20.54.32/28 maxlen 29 source-as 4242422274
+  172.20.172.0/28 maxlen 29 source-as 4242423160
+}
+```
+
+```
+wget -O - -q http://localhost:8042/api/roa/obgpd/46
+```
+
+```
+#
+# dn42regsrv ROA Generator
+# Last Updated: 2021-05-19 12:54:44.441996393 +0100 BST m=+5.976816481
+# Commit: 8b96b02aa4c2f02b3a3e64c8458bc76596b6345c
+#
+roa-set {
+  172.20.34.0/26 maxlen 29 source-as 4242423966
+  172.20.58.0/27 maxlen 29 source-as 4242420237
+ 
+... IPv4 ROA
+
+  172.20.54.32/28 maxlen 29 source-as 4242422274
+  172.20.172.0/28 maxlen 29 source-as 4242423160
+  fd35:eeee:eeee::/48 maxlen 64 source-as 4242422006
+  fd88:ee35:b221::/48 maxlen 48 source-as 4242423679
+
+... IPv6 ROA
+
+  fda3:ea2d:b60a::/48 maxlen 48 source-as 4242420228
+  fdfd:dead:c0de::/64 maxlen 64 source-as 4242421230
+}
 ```
 
 ### filter{,6}.txt
