@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <title>DN42 Free Explorer</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <link rel="icon" type="image/png" href="favicon.png"/>
+  <link rel="stylesheet" href="bootstrap.min.css"/>
+  <link rel="stylesheet" href="material-icons.css"/>
+<!-- Style overrides -->  
+  <style>
+.material-icons { display:inline-flex;vertical-align:middle }
+body { box-shadow: inset 0 2em 10em rgba(0,0,0,0.4); min-height: 100vh }
+  </style>
+</head>
+
+<body>
+<div id="free-app">
+
+<nav class="navbar navbar-fixed-top navbar-expand-md navbar-dark bg-dark">
+  <router-link to="/4"   class="btn btn-secondary mx-2">IPv4</router-link>
+  <router-link to="/6"   class="btn btn-secondary mx-2">IPv6</router-link>
+  <router-link to="/asn" class="btn btn-secondary mx-2">ASN</router-link>    
+  <div class="collapse navbar-collapse w-100 ml-auto text-nowrap">
+    <div class="ml-auto"><router-link class="navbar-brand"
+       to="/">Free&nbsp;Explorer</router-link>&nbsp;<a class="navbar-brand"
+       href="/">Registry&nbsp;Explorer</a>&nbsp;<a class="pull-right navbar-brand"
+       href="https://dn42.dev/"><img src="/dn42_logo.png" width="173" height="60"/></a>
+    </div>
+  </div>
+</nav>
+
+<router-view></router-view>
+
+</div>
+<footer class="page-footer font-small">
+<div style="margin-top: 20px; padding: 5px">
+  <a href="https://git.burble.com/burble.dn42/dn42regsrv">Source Code</a>.
+  Powered by
+  <a href="https://getbootstrap.com/">Bootstrap</a>,
+  <a href="https://vuejs.org">Vue.js</a>,
+  <a href="https://github.com/axios/axios">axios</a>,
+  <a href="http://alexcorvi.github.io/anchorme.js/">Anchorme</a>.
+</div>
+</footer>
+
+<script type="text/x-template" id="app-free4-template">
+<div class="p-5">
+<p>Select prefix length:
+<span class="btn-group mx-3" role="group" aria-label="Prefix Length" id="prefixselect">
+  <button @click="updatePrefixLen" value="24" type="button" class="btn btn-secondary">/24</button>
+  <button @click="updatePrefixLen" value="25" type="button" class="btn btn-secondary">/25</button>
+  <button @click="updatePrefixLen" value="26" type="button" class="btn btn-secondary">/26</button>
+  <button @click="updatePrefixLen" value="27" type="button" class="btn btn-secondary">/27</button>
+  <button @click="updatePrefixLen" value="28" type="button" class="btn btn-secondary">/28</button>
+  <button @click="updatePrefixLen" value="29" type="button" class="btn btn-secondary">/29</button>    
+</span>
+</p>    
+
+<div class="w-auto d-inline-block px-4">
+<section v-if="filter == 29">
+<p class="alert alert-danger">A /29 is a very small allocation,
+providing only 8 IP addresses.<br/>
+Whilst you will likely only need one IPv4 address per host a more
+typical allocation in DN42 is a /27.</p>
+</section>
+<section v-else-if="filter == 28">
+<p class="alert alert-success">/28 provides only 16 IPv4 addresses, but may be suitable
+for small networks.</p>
+</section>
+<section v-else-if="filter == 27">
+<p class="alert alert-success">A /27 is the typical allocation in DN42 providing
+  you with 32 IPv4 addresses.</p>
+</section>
+<section v-else-if="filter == 26">
+<p class="alert alert-info">A /26 would provide 64 IPv4 addresses
+and would be enough for most large networks.</p>
+</section>
+<section v-else-if="filter == 25">
+<p class="alert alert-warning">A /25 is considered a very
+large allocation in DN42.<br/>Typically you only need one
+IPv4 per host and should consider carefully before requesting such a big allocation.</p>
+</section>
+<section v-else-if="filter == 24">
+<p class="alert alert-danger">/24 is a huge allocation in DN42
+and is likely unecessary unless you have special requirements or are an organisation.
+You may request a /24 prefix, but expect to provide justification to the registry maintainers.
+DN42 also has address ranges specifically reserved for organisations or large
+allocations. See the 
+<a href="https://dn42.dev/howto/Address-Space">DN42 Wiki</a> for more details.</p>
+    </section>
+</div>    
+<p>
+    {{ ftotal }} free /{{ filter }} prefixes found, showing up to 10 random results<br/>
+    Select the prefix size again to get more networks.
+</p>
+    
+<div class="m-5">
+<pre v-for="prefix in filtered" class="text-center my-1"
+  style="font-size: 1.2rem">{{ prefix }}</pre>
+</div>
+
+<div class="container d-flex flex-column w-75">
+<section v-if="state == 'error'">
+  <div class="alert alert-warning clearfix" role="alert">
+    An error recurred whilst retrieving data from the API
+    <button type="button" class="float-right btn btn-primary"
+      v-on:click="reload"><span class="material-icons">refresh</span>
+      Refresh</button>
+  </div>
+</section>
+<section v-else-if="state == 'loading'">
+  <div class="alert alert-info" role="alert">Loading data ...</div>
+</section>
+<section v-else>
+<div class="text-center w-100"><span
+  class="mx-3"><b>IPv4</b><span><span
+  class="mx-3">Inetnum:&nbsp;{{ stats.alloc }}</span><span
+  class="mx-3">Free&nbsp;net&nbsp;blocks:&nbsp;{{ stats.nets }}</span><span
+  class="mx-3">Available&nbsp;IPs:&nbsp;{{ stats.addr }}&nbsp;({{
+      Math.round((stats.addr/262144)*100) }}%)</span>
+</div>
+</section>
+</div>
+  
+</div>
+</script>
+
+
+<script type="text/x-template" id="app-free6-template">
+<div class="p-5">
+<p>
+The recommended IPv6 prefix size in DN42 is a /48 which provides plenty of address
+space for a multi-site, global network.<br/>Smaller networks ranges are not advised
+as they are likely to limit the future growth of your network.
+</p>
+<p>
+The DN42 registry is not authoritative across the whole fd00::/8 range.<br/>It is 
+recommended to generate an RFC4193 compliant random prefix to reduce the risk of
+clashing with another network.
+<p>
+    Creating 10 random IPv6 /48 prefixes
+    <button type="button" class="mx-3 btn btn-primary" @click="generate">More !</button>
+</p>    
+    
+<div class="m-5">
+<pre v-for="prefix in plist" class="text-center my-1"
+  style="font-size: 1.2rem">{{ prefix }}</pre>
+</div>
+
+
+<div class="container d-flex flex-column w-75">
+<section v-if="state == 'error'">
+  <div class="alert alert-warning clearfix" role="alert">
+    An error recurred whilst retrieving data from the API
+    <button type="button" class="float-right btn btn-primary"
+      v-on:click="reload"><span class="material-icons">refresh</span>
+      Refresh</button>
+  </div>
+</section>
+<section v-else-if="state == 'loading'">
+  <div class="alert alert-info" role="alert">Loading data ...</div>
+</section>
+<section v-else>
+<div class="text-center w-100"><span
+  class="mx-3"><b>IPv6</b><span><span
+  class="mx-3">Inet6num: {{ stats.alloc }}</span><span
+  class="mx-3">Assigned /64s: ~{{ stats.nets }}M&nbsp;({{
+      Math.round(stats.nets*10000/72057594)/100000 }}%)</span><span
+  class="mx-3">Free /64s: ~{{ freenets }}T</span>
+</div>
+</section>
+</div>
+  
+</div>
+</script>
+
+
+<script type="text/x-template" id="app-asn-template">
+<div class="p-5">
+<p>
+    Showing 10 random free ASNs
+    <button type="button" class="mx-3 btn btn-primary" @click="generate">More !</button>
+</p>    
+    
+<div class="m-5">
+<pre v-for="prefix in alist" class="text-center my-1"
+  style="font-size: 1.2rem">{{ prefix }}</pre>
+</div>
+
+
+<div class="container d-flex flex-column w-75">
+<section v-if="state == 'error'">
+  <div class="alert alert-warning clearfix" role="alert">
+    An error recurred whilst retrieving data from the API
+    <button type="button" class="float-right btn btn-primary"
+      v-on:click="reload"><span class="material-icons">refresh</span>
+      Refresh</button>
+  </div>
+</section>
+<section v-else-if="state == 'loading'">
+  <div class="alert alert-info" role="alert">Loading data ...</div>
+</section>
+<section v-else>
+<div class="text-center w-100"><span
+  class="mx-3"><b>ASN</b><span><span
+  class="mx-3">Allocated: {{ stats.alloc }}</span><span
+  class="mx-3">Available: {{ 4000 - stats.alloc }}
+  ({{ Math.round(stats.alloc / 40) }}%)</span>
+</div>
+</section>
+</div>
+  
+</div>
+</script>
+
+
+<script type="text/x-template" id="app-root-template">
+<div class="p-3">
+<div class="jumbotron">
+<h1>DN42 IP Explorer</h1>
+<p class="lead">Select IPv4, IPv6 or ASN to find free blocks and ASNs</p>
+</div>
+</div>
+</script>
+
+
+<script src="jquery.slim.min.js"></script>
+<script src="bootstrap.bundle.min.js"></script>
+<script src="vue.min.js"></script>
+<script src="vue-router.min.js"></script>
+<script src="axios.min.js"></script>
+<script src="anchorme.min.js"></script>
+<script src="anchorme.min.js"></script>
+<script src="free.js"></script>
+</body>
+</html>
