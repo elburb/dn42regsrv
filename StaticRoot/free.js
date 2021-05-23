@@ -491,19 +491,32 @@ Vue.component('app-free6', {
         // check if a network is already allocated
         check6(n) {
 
+            // fixed /48 mask
+            var mask = BigInt(0xFFFFFFFFFFFF0000n)
+
             var match = null
             this.p6.forEach(obj => {
                 // only check longer prefixes than current match
                 if ((match == null) || (obj.plen >= match.plen)) {
-                    var masked = n & obj.mask
+                    var masked
+
+                    // is the new network a subnet of the test obj ?
+                    masked = n & obj.mask
                     if (obj.subnet == masked) {
                         // new, more precise prefix found
                         match = obj
                     }
+
+                    // is the test obj a subnet of this network ?
+                    masked = obj.subnet & mask
+                    if (n == masked) {
+                        // immediate fail, existing subnets not allowed
+                        return false
+                    }
                 }
             })
 
-            if ((match != null) && (match.policy != 'open')) {
+            if (match.policy != 'open') {
                 return false
             }
 
