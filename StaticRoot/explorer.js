@@ -57,7 +57,13 @@ Vue.component('reg-attribute', {
             return reg[2]
         },
         decorated: function() {
+            // get content, replacing HTML special chars
             var c = this.content
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;")            
 
             // an attribute terminated with \n indicates a blank
             // trailing line, however a single trailing <br/> will

@@ -1,7 +1,64 @@
 ---
 kind: pipeline
-type: exec
+type: docker
 name: default
+
+steps:
+ - name: binary build
+   image: golang
+   environment:
+     CGO_ENABLED: 0
+   commands:
+    - go vet
+    - go build
+
+ - name: static build
+   image: alpine
+   commands:
+    - tar cvzf staticroot.tar.gz -C StaticRoot .
+
+ - name: upload bin
+   image: plugins/s3
+   settings:
+     bucket: artifacts
+     access_key:
+       from_secret: MINIO_ACCESS_KEY
+     secret_key:
+       from_secret: MINIO_SECRET_KEY
+     endpoint: https://minio.burble.dn42
+     region: uk-lon3
+     path_style: true
+     source: dn42regsrv
+     target: /dn42regsrv/${DRONE_BRANCH}
+
+ - name: upload site
+   image: plugins/s3
+   settings:
+     bucket: artifacts
+     access_key:
+       from_secret: MINIO_ACCESS_KEY
+     secret_key:
+       from_secret: MINIO_SECRET_KEY
+     endpoint: https://minio.burble.dn42
+     region: uk-lon3
+     path_style: true
+     source: staticroot.tar.gz
+     target: /dn42regsrv/${DRONE_BRANCH}
+
+---
+kind: secret
+name: MINIO_ACCESS_KEY
+get:
+  path: burble.dn42/kv/data/drone/minio
+  name: ACCESS_KEY
+
+---
+kind: secret
+name: MINIO_SECRET_KEY
+get:
+  path: burble.dn42/kv/data/drone/minio
+  name: SECRET_KEY
+
 
 steps:
  - name: build
