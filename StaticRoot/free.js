@@ -270,35 +270,77 @@ Vue.component('app-free4', {
             this.scanSubnets(0, 0, 0, 'undefined')
         },
 
-        // filter subnets based on prefix length
-        filterFree() {
+        // pick 10 random prefixes of a certain length
+        pick10(prefix) {
+
+            // may be called with an empty free list
+            if (this.free4.length == 0) {
+                return { total: 0, blocks: [ ] }
+            }
 
             var tlist = [ ]
-            // filter the free list
+            // filter the free list by this prefix size
             this.free4.forEach(free => {
-                if (free.plen == this.filter) {
+                if (free.plen == prefix) {
                     tlist.push(free)
                 }
             })
 
-            this.ftotal = tlist.length
+            // if there are fewer than 10 prefixes,
+            // split some of the next largest blocks
+            if (tlist.length < 10) {
+                const bit = (2**(32 - prefix))>>>0
+                const tmp = this.pick10(prefix-1)
+                const blocks = tmp.blocks
 
-            // pick up to ten random prefixes
+                while(tlist.length < 10) {
+                    var ix = Math.floor(Math.random()*blocks.length)
+                    const obj = blocks[ix]
+                    // split the block
+                    tlist.push({
+                        subnet: (obj.subnet & (~bit))>>>0,
+                        mask: (obj.mask | bit)>>>0,
+                        plen: prefix
+                    })
+                    tlist.push({
+                        subnet: (obj.subnet | bit)>>>0,
+                        mask: (obj.mask | bit)>>>0,
+                        plen: prefix
+                    })
+                    blocks.splice(ix, 1)
+                }
+            }
+
+            const total = tlist.length
+
+            // select 10 random prefixes
             var result = [ ]
-            for(var i = 0; ((tlist.length > 0) && (i < 10)); i++) {
-                var ix = Math.round(Math.random() * tlist.length)
-                var obj = tlist[ix]
+            for (var i = 0; ((tlist.length > 0) && (i < 10)); i++) {
+                var ix = Math.floor(Math.random()*tlist.length)
+                result.push(tlist[ix])
+                tlist.splice(ix,1)
+            }
+            return { total: total, blocks: result }
+        },
 
+        // filter subnets based on prefix length
+        filterFree() {
+
+            var result = [ ]
+            tmp = this.pick10(this.filter)
+            this.ftotal = tmp.total
+            blocks = tmp.blocks
+            
+            for(var i = 0; i < blocks.length; i++) {
+                const obj = blocks[i]
+                
                 // push to result
                 var octets = [ ]
                 octets[0] = (obj.subnet >> 24) & 0xFF
                 octets[1] = (obj.subnet >> 16) & 0xFF
                 octets[2] = (obj.subnet >> 8) & 0xFF
                 octets[3] = obj.subnet & 0xFF
-                result.push(octets.join(".")+'/'+obj.plen)
-                
-                // remove from the list
-                tlist.splice(ix, 1)
+                result.push(octets.join(".")+'/'+obj.plen)                
             }
 
             this.filtered.splice(0, this.filtered.length, ...result)
@@ -537,7 +579,7 @@ Vue.component('app-free6', {
                     // create 48bits of random address
                     var quads = [ ]
                     for(var j = 0; j < 3; j++) {
-                        quads[j] = Math.round(Math.random()*65536)
+                        quads[j] = Math.floor(Math.random()*65536)
                     }
                     // fix the first byte to be in fd00::/8
                     quads[0] = 0xFD00 + (quads[0] & 0xFF)
@@ -669,7 +711,7 @@ Vue.component('app-asn', {
             var nlist = [ ]
             for(var i = 0; i < 10; i++) {
                 // pick a random free ASN
-                var rand = Math.round(Math.random() * this.free.length)
+                var rand = Math.floor(Math.random() * this.free.length)
                 nlist.push(this.free[rand])
             }
             
