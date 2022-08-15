@@ -26,7 +26,7 @@ steps:
      secret_key:
        from_secret: MINIO_SECRET_KEY
      endpoint: https://minio.burble.dn42
-     region: uk-lon3
+     region: fr-par1
      path_style: true
      source: dn42regsrv
      target: /dn42regsrv/${DRONE_BRANCH}
@@ -40,7 +40,7 @@ steps:
      secret_key:
        from_secret: MINIO_SECRET_KEY
      endpoint: https://minio.burble.dn42
-     region: uk-lon3
+     region: fr-par1
      path_style: true
      source: staticroot.tar.gz
      target: /dn42regsrv/${DRONE_BRANCH}

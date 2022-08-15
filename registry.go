@@ -348,56 +348,59 @@ func loadAttributes(path string) []*RegAttribute {
 
 		line := strings.TrimRight(scanner.Text(), "\r\n")
 
+		// skip empty lines
+		if len(line) == 0 {
+			continue
+		}
+
 		// lines starting with '+' denote an empty line
 		if line[0] == '+' {
-
 			// concatenate a \n on to the previous attribute value
 			attributes[len(attributes)-1].RawValue += "\n"
+			continue
+		}
 
-		} else {
+		// look for a : separator in the first 20 characters
+		ix := strings.IndexByte(line, ':')
+		if ix == -1 || ix >= 20 {
+			// couldn't find one
 
-			// look for a : separator in the first 20 characters
-			ix := strings.IndexByte(line, ':')
-			if ix == -1 || ix >= 20 {
-				// couldn't find one
+			if len(line) <= 20 {
+				// hmmm, the line was shorter than 20 characters
+				// something is amiss
 
-				if len(line) <= 20 {
-					// hmmm, the line was shorter than 20 characters
-					// something is amiss
+				log.WithFields(log.Fields{
+					"length": len(line),
+					"path":   path,
+					"line":   line,
+				}).Warn("Short line detected")
 
-					log.WithFields(log.Fields{
-						"length": len(line),
-						"path":   path,
-						"line":   line,
-					}).Warn("Short line detected")
-
-				} else {
-
-					// line is a continuation of the previous line, so
-					// concatenate the value on to the previous attribute value
-					attributes[len(attributes)-1].RawValue +=
-						"\n" + string(line[20:])
-
-				}
 			} else {
-				// found a key and : separator
 
-				// is there actually a value ?
-				var value string
-				if len(line) <= 20 {
-					// blank value
-					value = ""
-				} else {
-					value = string(line[20:])
-				}
+				// line is a continuation of the previous line, so
+				// concatenate the value on to the previous attribute value
+				attributes[len(attributes)-1].RawValue +=
+					"\n" + string(line[20:])
 
-				// create a new attribute
-				a := &RegAttribute{
-					Key:      string(line[:ix]),
-					RawValue: value,
-				}
-				attributes = append(attributes, a)
 			}
+		} else {
+			// found a key and : separator
+
+			// is there actually a value ?
+			var value string
+			if len(line) <= 20 {
+				// blank value
+				value = ""
+			} else {
+				value = string(line[20:])
+			}
+
+			// create a new attribute
+			a := &RegAttribute{
+				Key:      string(line[:ix]),
+				RawValue: value,
+			}
+			attributes = append(attributes, a)
 		}
 	}
 
