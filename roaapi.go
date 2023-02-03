@@ -483,7 +483,7 @@ func (roa *ROA) CompileROA(registry *Registry,
 			} else {
 
 				// filter rules still have precedence over local values
-				if (uint8(tmp) < mlen) && (uint8(tmp) > filter.MinLen) {
+				if (uint8(tmp) < mlen) && (uint8(tmp) >= filter.MinLen) {
 					mlen = uint8(tmp)
 				}
 
