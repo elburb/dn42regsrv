@@ -12,67 +12,20 @@ steps:
     - go vet
     - go build
 
- - name: static build
-   image: alpine
-   commands:
-    - tar cvzf staticroot.tar.gz -C StaticRoot .
-
- - name: upload bin
-   image: plugins/s3
+ - name: docker
+   image: plugins/docker
    settings:
-     bucket: artifacts
-     access_key:
-       from_secret: MINIO_ACCESS_KEY
-     secret_key:
-       from_secret: MINIO_SECRET_KEY
-     endpoint: https://minio.burble.dn42
-     region: fr-par1
-     path_style: true
-     source: dn42regsrv
-     target: /dn42regsrv/${DRONE_BRANCH}
-
- - name: upload site
-   image: plugins/s3
-   settings:
-     bucket: artifacts
-     access_key:
-       from_secret: MINIO_ACCESS_KEY
-     secret_key:
-       from_secret: MINIO_SECRET_KEY
-     endpoint: https://minio.burble.dn42
-     region: fr-par1
-     path_style: true
-     source: staticroot.tar.gz
-     target: /dn42regsrv/${DRONE_BRANCH}
-
+     registry: git.burble.dn42
+     repo: git.burble.dn42/burble.dn42/dn42regsrv
+     tags: latest
+     username: burble
+     password:
+       from_secret: TOKEN
+  
 ---
 kind: secret
-name: MINIO_ACCESS_KEY
+name: TOKEN
 get:
-  path: burble.dn42/kv/data/drone/minio
-  name: ACCESS_KEY
+  path: burble.dn42/kv/data/drone/git.burble.dn42
+  name: artifact-token
 
----
-kind: secret
-name: MINIO_SECRET_KEY
-get:
-  path: burble.dn42/kv/data/drone/minio
-  name: SECRET_KEY
-
-
-steps:
- - name: build
-   environment:
-     CGO_ENABLED: 0
-   commands:
-    - go build
-
- - name: stage
-   commands:
-    - stage_artifact.sh dn42regsrv dn42regsrv StaticRoot
-
- - name: promote
-   commands:
-    - promote_artifact.sh dn42regsrv
-   when:
-    branch: master
