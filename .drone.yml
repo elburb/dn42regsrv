@@ -21,11 +21,11 @@ steps:
      username: burble
      password:
        from_secret: TOKEN
-  
+     storage_driver: vfs
+
 ---
 kind: secret
 name: TOKEN
 get:
   path: burble.dn42/kv/data/drone/git.burble.dn42
   name: artifact-token
-
