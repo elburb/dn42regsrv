@@ -21,7 +21,7 @@ USER 1000
 WORKDIR /registry
 EXPOSE 8042
 
-ENTRYPOINT [ "/sbin/tini" "--" ]
+ENTRYPOINT [ "/sbin/tini", "--" ]
 CMD [ "/usr/local/bin/dn42regsrv", "-d", "/registry", "-s", "/StaticRoot" ]
 
 ###########################################################################
