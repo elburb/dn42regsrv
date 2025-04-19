@@ -6,7 +6,7 @@ VOLUME /registry
 
 ###########################################################################
 
-RUN apk add --update git && rm -rf /var/cache/apk/*
+RUN apk add --update git tini && rm -rf /var/cache/apk/*
 
 ADD dn42regsrv /usr/local/bin/dn42regsrv
 ADD StaticRoot /StaticRoot
@@ -21,7 +21,8 @@ USER 1000
 WORKDIR /registry
 EXPOSE 8042
 
-ENTRYPOINT [ "/usr/local/bin/dn42regsrv", "-d", "/registry", "-s", "/StaticRoot" ]
+ENTRYPOINT [ "/sbin/tini" "--" ]
+CMD [ "/usr/local/bin/dn42regsrv", "-d", "/registry", "-s", "/StaticRoot" ]
 
 ###########################################################################
 # end of file
