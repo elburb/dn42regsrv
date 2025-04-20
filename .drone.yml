@@ -27,5 +27,5 @@ steps:
 kind: secret
 name: TOKEN
 get:
-  path: burble.dn42/kv/data/drone/git.burble.dn42
+  path: burble.dn42/apps/data/drone/secrets/git.burble.dn42
   name: artifact-token
